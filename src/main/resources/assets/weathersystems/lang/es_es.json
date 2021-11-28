@@ -1,0 +1,6 @@
+{
+  "commands.ws.setweather.success.acidrain": "WS: Se cambió el clima a lluvia ácida.",
+  "commands.ws.setweather.success.blizzard": "WS: Se cambió el clima a ventisca.",
+  "commands.ws.setweather.success.clear": "WS: Se cambió el clima a despejado.",
+  "commands.ws.setweather.failed": "WS: No se pudo cambiar el clima a %s"
+}

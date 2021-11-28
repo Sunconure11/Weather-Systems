@@ -3,33 +3,33 @@
   "id": "betterweather",
   "version": "${version}",
 
-  "name": "Better Weather",
-  "description": "A mod that adds more weather events! Some audio from: https://freesfx.co.uk/",
+  "name": "Weather Systems",
+  "description": "A fork of a mod that adds more weather events! Some audio from: https://freesfx.co.uk/",
   "authors": [
-    "Corgi Taco"
+    "Corgi Taco, Mysticpasta1"
   ],
   "contact": {
     "homepage": "null",
-    "sources": "https://github.com/CorgiTaco/Better-Weather"
+    "sources": "https://github.com/Mysticpasta1/Weather-Systems"
   },
 
   "license": "LGPLv3",
-  "icon": "yes",
+  "icon": "no",
 
   "environment": "*",
   "entrypoints": {
     "main": [
-      "corgitaco.betterweather.BetterWeather"
+      "com.mystic.weathersystems.WeatherSystems"
     ],
     "client": [
-      "corgitaco.betterweather.client.BWClient"
+      "com.mystic.weathersystems.client.WSClient"
     ],
     "modmenu": [
-      "corgitaco.betterweather.config.BWModMenuIntegration"
+      "com.mystic.weathersystems.config.WSModMenuIntegration"
     ]
   },
   "mixins": [
-    "betterweather.mixins.json"
+    "weathersystems.mixins.json"
   ],
 
   "depends": {
@@ -40,5 +40,5 @@
   "suggests": {
     "flamingo": "*"
   },
-  "accessWidener" : "betterweather.aw"
+  "accessWidener" : "weathersystems.aw"
 }

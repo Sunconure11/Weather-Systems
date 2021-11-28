@@ -1,0 +1,6 @@
+{
+  "commands.ws.setweather.success.acidrain": "WS: Tempo definido para chuva ácida.",
+  "commands.ws.setweather.success.blizzard": "WS: Tempo definido para nevasca.",
+  "commands.ws.setweather.success.clear": "WS: Tempo definido para limpo.",
+  "commands.ws.setweather.failed": "WS: Não foi possível definir o tempo para %s"
+}
