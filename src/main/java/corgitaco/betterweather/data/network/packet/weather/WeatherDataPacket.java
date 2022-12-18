@@ -3,9 +3,9 @@ package corgitaco.betterweather.data.network.packet.weather;
 import corgitaco.betterweather.helpers.BetterWeatherWorldData;
 import corgitaco.betterweather.weather.BWWeatherEventContext;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.network.PacketBuffer;
-import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
@@ -23,12 +23,12 @@ public class WeatherDataPacket {
         this.weatherForced = weatherForced;
     }
 
-    public static void writeToPacket(WeatherDataPacket packet, PacketBuffer buf) {
+    public static void encode(WeatherDataPacket packet, FriendlyByteBuf buf) {
         buf.writeUtf(packet.weatherEvent);
         buf.writeBoolean(packet.weatherForced);
     }
 
-    public static WeatherDataPacket readFromPacket(PacketBuffer buf) {
+    public static WeatherDataPacket decode(FriendlyByteBuf buf) {
         return new WeatherDataPacket(buf.readUtf(), buf.readBoolean());
     }
 
@@ -37,7 +37,7 @@ public class WeatherDataPacket {
             ctx.get().enqueueWork(() -> {
                 Minecraft minecraft = Minecraft.getInstance();
 
-                ClientWorld world = minecraft.level;
+                ClientLevel world = minecraft.level;
                 if (world != null && minecraft.player != null) {
                     BWWeatherEventContext weatherEventContext = ((BetterWeatherWorldData) world).getWeatherEventContext();
                     if (weatherEventContext == null) {

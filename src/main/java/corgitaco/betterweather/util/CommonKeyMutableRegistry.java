@@ -2,11 +2,12 @@ package corgitaco.betterweather.util;
 
 import com.mojang.serialization.Lifecycle;
 import corgitaco.betterweather.mixin.access.BiomeAccess;
-import net.minecraft.util.RegistryKey;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.registry.MutableRegistry;
-import net.minecraft.util.registry.SimpleRegistry;
-import net.minecraft.world.biome.Biome;
+import net.minecraft.core.Holder;
+import net.minecraft.core.MappedRegistry;
+import net.minecraft.core.WritableRegistry;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.biome.Biome;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -20,38 +21,34 @@ import static java.util.Objects.requireNonNull;
 /**
  * Used to allow either server or world specific biome objects to function as keys to return the same common biome for the given world since each world can contain a unique biome registry.
  */
-public class CommonKeyMutableRegistry extends SimpleRegistry<Biome> {
+public class CommonKeyMutableRegistry extends MappedRegistry<Biome> {
     private final Map<Biome, Biome> storage = new IdentityHashMap<>();
 
     // Registry is the Server registry.
-    public CommonKeyMutableRegistry(MutableRegistry<Biome> registry) {
-        super(registry.key(), registry.elementsLifecycle());
-
+    public CommonKeyMutableRegistry(WritableRegistry<Biome> registry) {
+        super(registry.key(), registry.elementsLifecycle(), registry::createIntrusiveHolder);
         registry.entrySet().forEach(entry -> {
             Biome biome1 = entry.getValue();
-            Biome biome2 = registerMapping(
+            Holder<Biome> biome2 = registerMapping(
                     registry.getId(biome1),
                     entry.getKey(),
                     shallow(biome1),
-                    ((SimpleRegistry<Biome>) registry).lifecycle(biome1)
+                    registry.lifecycle(biome1)
             );
 
-            ResourceLocation name = requireNonNull(biome1.getRegistryName(), "Invalid Biome registry name.");
+            ResourceLocation name = requireNonNull(registry.getKey(biome1), "Invalid Biome registry name.");
 
-            storage.put(biome1, biome2.setRegistryName(name));
+            storage.put(biome1, biome2.value());
         });
     }
 
     // Creates a shallow copy of a biome.
     private static Biome shallow(Biome biome) {
         @SuppressWarnings("ConstantConditions") // Mixins are used.
-        Biome.Climate climate = ((BiomeAccess) (Object) biome).getClimateSettings();
+        Biome.ClimateSettings climate = ((BiomeAccess) (Object) biome).getClimateSettings();
 
         return BiomeAccess.create(
                 climate,
-                biome.getBiomeCategory(),
-                biome.getDepth(),
-                biome.getScale(),
                 biome.getSpecialEffects(),
                 biome.getGenerationSettings(),
                 biome.getMobSettings()
@@ -65,7 +62,7 @@ public class CommonKeyMutableRegistry extends SimpleRegistry<Biome> {
     }
 
     @Override
-    public @NotNull Optional<RegistryKey<Biome>> getResourceKey(@NotNull Biome biome) {
+    public @NotNull Optional<ResourceKey<Biome>> getResourceKey(@NotNull Biome biome) {
         return super.getResourceKey(get(biome));
     }
 

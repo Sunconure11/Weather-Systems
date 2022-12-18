@@ -1,30 +1,23 @@
 package corgitaco.betterweather.mixin.chunk;
 
-import corgitaco.betterweather.chunk.TickHelper;
 import corgitaco.betterweather.helpers.BetterWeatherWorldData;
 import corgitaco.betterweather.weather.BWWeatherEventContext;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.server.ChunkHolder;
-import net.minecraft.world.server.ServerWorld;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.server.level.ChunkMap;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(ChunkHolder.class)
+@Mixin(ChunkMap.class)
 public abstract class MixinChunkHolder {
 
-    @Inject(method = "broadcastChanges", at = @At("HEAD"))
-    private void runChunkUpdates(Chunk chunk, CallbackInfo ci) {
-        ServerWorld world = (ServerWorld) chunk.getLevel();
+    @Inject(method = "broadcast", at = @At("HEAD"))
+    private void runChunkUpdates(Entity p_140334_, Packet<?> p_140335_, CallbackInfo ci) {
+        ServerLevel world = (ServerLevel) p_140334_.getLevel();
 
         BWWeatherEventContext weatherEventContext = ((BetterWeatherWorldData) world).getWeatherEventContext();
-
-        if (weatherEventContext != null) {
-            if (!((TickHelper) chunk).isTickDirty()) {
-                weatherEventContext.getCurrentEvent().doChunkLoad(chunk, world);
-                ((TickHelper) chunk).setTickDirty();
-            }
-        }
     }
 }

@@ -1,6 +1,6 @@
 package corgitaco.betterweather.api.client.graphics.opengl.program;
 
-import net.minecraft.resources.IResource;
+import net.minecraft.server.packs.resources.Resource;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.Contract;
@@ -28,8 +28,8 @@ public final class ShaderProgramBuilder {
     }
 
     @Contract("_, _ -> this")
-    public ShaderProgramBuilder compile(int type, IResource resource) throws IOException {
-        try (InputStream stream = resource.getInputStream()) {
+    public ShaderProgramBuilder compile(int type, Resource resource) throws IOException {
+        try (InputStream stream = resource.open()) {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8.newDecoder()))) {
                 StringBuilder builder = new StringBuilder();
 

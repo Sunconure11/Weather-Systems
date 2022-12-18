@@ -6,11 +6,11 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import corgitaco.betterweather.helpers.BetterWeatherWorldData;
 import corgitaco.betterweather.weather.BWWeatherEventContext;
-import net.minecraft.command.CommandSource;
-import net.minecraft.command.Commands;
-import net.minecraft.command.ISuggestionProvider;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.server.ServerWorld;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 
 import java.util.Arrays;
 import java.util.List;
@@ -25,37 +25,37 @@ public class SetWeatherCommand {
             "36000" // 30 minutes
     );
 
-    public static ArgumentBuilder<CommandSource, ?> register(CommandDispatcher<CommandSource> dispatcher) {
+    public static ArgumentBuilder<CommandSourceStack, ?> register(CommandDispatcher<CommandSourceStack> dispatcher) {
         return Commands.literal("setweather").then(
                 Commands.argument("weather", StringArgumentType.string())
                         .suggests((ctx, sb) -> {
                             BWWeatherEventContext weatherEventContext = ((BetterWeatherWorldData) ctx.getSource().getLevel()).getWeatherEventContext();
-                            return ISuggestionProvider.suggest(weatherEventContext != null ? weatherEventContext.getWeatherEvents().keySet().stream() : Arrays.stream(new String[]{WEATHER_NOT_ENABLED}), sb);
+                            return SharedSuggestionProvider.suggest(weatherEventContext != null ? weatherEventContext.getWeatherEvents().keySet().stream() : Arrays.stream(new String[]{WEATHER_NOT_ENABLED}), sb);
                         }).executes(cs -> betterWeatherSetSeason(cs.getSource(), cs.getArgument("weather", String.class),
                                 12000)) // Default length to 10 minutes.
                         .then(
                                 Commands.argument("length", IntegerArgumentType.integer())
-                                        .suggests((ctx, sb) -> ISuggestionProvider.suggest(LENGTH_SUGGESTIONS.stream(), sb))
+                                        .suggests((ctx, sb) -> SharedSuggestionProvider.suggest(LENGTH_SUGGESTIONS.stream(), sb))
                                         .executes((cs) -> betterWeatherSetSeason(cs.getSource(), cs.getArgument("weather", String.class),
                                                 cs.getArgument("length", int.class)))
                         )
         );
     }
 
-    public static int betterWeatherSetSeason(CommandSource source, String weatherKey, int length) {
+    public static int betterWeatherSetSeason(CommandSourceStack source, String weatherKey, int length) {
         if (weatherKey.equals(WEATHER_NOT_ENABLED)) {
-            source.sendFailure(new TranslationTextComponent("commands.bw.setweather.no.weather.for.world"));
+            source.sendFailure(Component.translatable("commands.bw.setweather.no.weather.for.world"));
             return 0;
         }
 
-        ServerWorld world = source.getLevel();
+        ServerLevel world = source.getLevel();
         BWWeatherEventContext weatherEventContext = ((BetterWeatherWorldData) world).getWeatherEventContext();
 
         if (weatherEventContext != null) {
             if (weatherEventContext.getWeatherEvents().containsKey(weatherKey)) {
-                source.sendSuccess(weatherEventContext.weatherForcer(weatherKey, length, world).successTranslationTextComponent(weatherKey), true);
+                source.sendSuccess((Component) weatherEventContext.weatherForcer(weatherKey, length, world).successTranslationTextComponent(weatherKey), true);
             } else {
-                source.sendFailure(new TranslationTextComponent("commands.bw.setweather.fail.no_weather_event", weatherKey));
+                source.sendFailure(Component.translatable("commands.bw.setweather.fail.no_weather_event", weatherKey));
                 return 0;
             }
         }

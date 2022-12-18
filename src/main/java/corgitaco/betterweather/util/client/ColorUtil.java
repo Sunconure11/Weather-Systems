@@ -1,17 +1,15 @@
 package corgitaco.betterweather.util.client;
 
+import com.mojang.math.Vector3d;
 import corgitaco.betterweather.BetterWeather;
 import corgitaco.betterweather.api.client.ColorSettings;
 import corgitaco.betterweather.helpers.BetterWeatherWorldData;
-import corgitaco.betterweather.season.BWSubseasonSettings;
-import corgitaco.betterweather.season.SeasonContext;
 import corgitaco.betterweather.weather.BWWeatherEventContext;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.util.RegistryKey;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.world.biome.Biome;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.biome.Biome;
 
 import java.util.Optional;
 
@@ -40,51 +38,20 @@ public final class ColorUtil {
     public static int getBiomeColor(Biome biome, Type type, int previous) {
         Minecraft minecraft = Minecraft.getInstance();
 
-        ClientWorld world = minecraft.level;
+        ClientLevel world = minecraft.level;
         if (world == null) {
             return previous;
         }
 
-        SeasonContext seasonContext = ((BetterWeatherWorldData) world).getSeasonContext();
         BWWeatherEventContext weatherEventContext = ((BetterWeatherWorldData) world).getWeatherEventContext();
 
-        if (seasonContext == null && weatherEventContext == null) {
-            return previous;
-        }
-
-        Optional<RegistryKey<Biome>> optionalKey = world.registryAccess().registryOrThrow(Registry.BIOME_REGISTRY).getResourceKey(biome);
+        Optional<ResourceKey<Biome>> optionalKey = world.registryAccess().registryOrThrow(Registry.BIOME_REGISTRY).getResourceKey(biome);
         if (!optionalKey.isPresent()) {
             return previous;
         }
 
 
-        RegistryKey<Biome> key = optionalKey.get();
-
-        int seasonTarget = Integer.MAX_VALUE;
-        double seasonBlend = -1;
-
-        if (seasonContext != null) {
-            BWSubseasonSettings settings = seasonContext.getCurrentSubSeasonSettings();
-
-            switch (type) {
-                case GRASS:
-                    seasonTarget = clamp(settings.getTargetGrassColor(key), previous);
-                    seasonBlend = settings.getGrassColorBlendStrength(key);
-                    break;
-                case FOLIAGE:
-                    seasonTarget = clamp(settings.getTargetFoliageColor(key), previous);
-                    seasonBlend = settings.getFoliageColorBlendStrength(key);
-                    break;
-                case FOG:
-                    seasonTarget = clamp(settings.getTargetFogColor(key), previous);
-                    seasonBlend = settings.getFogColorBlendStrength(key);
-                    break;
-                default:
-                    seasonTarget = clamp(settings.getTargetSkyColor(key), previous);
-                    seasonBlend = settings.getSkyColorBlendStrength(key);
-                    break;
-            }
-        }
+        ResourceKey<Biome> key = optionalKey.get();
 
         int weatherTarget = Integer.MAX_VALUE;
         double weatherBlend = -1;
@@ -118,9 +85,7 @@ public final class ColorUtil {
             }
         }
 
-        int seasonMix = mix(unpack(previous), unpack(seasonTarget), seasonBlend);
-        int weatherMix = weatherEventContext != null && weatherEventContext.getCurrentEvent().isValidBiome(biome) ? mix(unpack(seasonContext != null ? seasonMix : previous), unpack(weatherTarget), weatherBlend) : Integer.MAX_VALUE;
-        return weatherMix == Integer.MAX_VALUE ? seasonMix : weatherMix;
+        return weatherEventContext != null && weatherEventContext.getCurrentEvent().isValidBiome(biome) ? mix(unpack(previous), unpack(weatherTarget), weatherBlend) : Integer.MAX_VALUE;
     }
 
     private static int clamp(int target, int fallback) {
@@ -138,7 +103,7 @@ public final class ColorUtil {
     }
 
     public static int[] transformFloatColor(Vector3d floatColor) {
-        return new int[]{255, (int) (floatColor.x() * 255), (int) (floatColor.y() * 255), (int) (floatColor.z() * 255)};
+        return new int[]{255, (int) (floatColor.x * 255), (int) (floatColor.y * 255), (int) (floatColor.z * 255)};
     }
 
     // Interpolate between color channels.

@@ -1,18 +1,18 @@
 package corgitaco.betterweather.data.network.packet.util;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.PacketBuffer;
-import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
 @SuppressWarnings("InstantiationOfUtilityClass")
 public class RefreshRenderersPacket {
 
-    public static void writeToPacket(RefreshRenderersPacket packet, PacketBuffer buf) {
+    public static void encode(RefreshRenderersPacket packet, FriendlyByteBuf buf) {
     }
 
-    public static RefreshRenderersPacket readFromPacket(PacketBuffer buf) {
+    public static RefreshRenderersPacket decode(FriendlyByteBuf buf) {
         return new RefreshRenderersPacket();
     }
 

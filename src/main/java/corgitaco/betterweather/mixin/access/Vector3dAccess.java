@@ -1,6 +1,6 @@
 package corgitaco.betterweather.mixin.access;
 
-import net.minecraft.util.math.vector.Vector3d;
+import com.mojang.math.Vector3d;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 

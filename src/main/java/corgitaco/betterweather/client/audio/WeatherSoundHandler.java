@@ -1,48 +1,54 @@
 package corgitaco.betterweather.client.audio;
 
+import com.mojang.math.Vector3d;
 import corgitaco.betterweather.api.weather.WeatherEvent;
 import corgitaco.betterweather.api.weather.WeatherEventAudio;
 import corgitaco.betterweather.api.weather.WeatherEventClientSettings;
 import corgitaco.betterweather.helpers.BetterWeatherWorldData;
 import corgitaco.betterweather.weather.BWWeatherEventContext;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.audio.IAmbientSoundHandler;
-import net.minecraft.client.audio.SoundHandler;
-import net.minecraft.client.audio.TickableSound;
-import net.minecraft.client.entity.player.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
+import net.minecraft.client.resources.sounds.AmbientSoundHandler;
+import net.minecraft.client.sounds.SoundManager;
+import net.minecraft.core.BlockPos;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.FluidTags;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.SoundEvent;
-import net.minecraft.util.math.*;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.world.LightType;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.BiomeManager;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeManager;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class WeatherSoundHandler implements IAmbientSoundHandler {
+public class WeatherSoundHandler implements AmbientSoundHandler {
 
-    private final ClientPlayerEntity player;
-    private final SoundHandler soundHandler;
+    private final Player player;
+    private final SoundManager soundHandler;
     private final BiomeManager biomeManager;
-    private final ClientWorld world;
+    private final ClientLevel world;
     private WeatherSoundHandler.Sound currentSound;
 
-    public WeatherSoundHandler(ClientPlayerEntity player, SoundHandler soundHandler, BiomeManager biomeManager) {
+    public WeatherSoundHandler(Player player, SoundManager soundHandler, BiomeManager biomeManager) {
         this.player = player;
         this.soundHandler = soundHandler;
         this.biomeManager = biomeManager;
-        this.world = player.clientLevel;
+        this.world = (ClientLevel) player.getLevel();
     }
 
     @Override
     public void tick() {
-        BWWeatherEventContext weatherEventContext = ((BetterWeatherWorldData) player.clientLevel).getWeatherEventContext();
+        BWWeatherEventContext weatherEventContext = ((BetterWeatherWorldData) player.getLevel()).getWeatherEventContext();
         if (weatherEventContext == null) {
             return;
         }
@@ -50,7 +56,7 @@ public class WeatherSoundHandler implements IAmbientSoundHandler {
         WeatherEvent currentEvent = weatherEventContext.getCurrentEvent();
         WeatherEventClientSettings clientSettings = currentEvent.getClientSettings();
         if (clientSettings instanceof WeatherEventAudio) {
-            Biome currentBiome = biomeManager.getBiome(player.blockPosition());
+            Biome currentBiome = world.getBiome(player.blockPosition()).value();
             if (currentEvent.isValidBiome(currentBiome)) {
                 if (this.currentSound == null) {
                     this.currentSound = new WeatherSoundHandler.Sound(((WeatherEventAudio) clientSettings).getSound(), this.world, ((WeatherEventAudio) clientSettings).getVolume(), ((WeatherEventAudio) clientSettings).getPitch());
@@ -78,10 +84,10 @@ public class WeatherSoundHandler implements IAmbientSoundHandler {
     }
 
     @OnlyIn(Dist.CLIENT)
-    public static class Sound extends TickableSound {
+    public static class Sound extends AbstractTickableSoundInstance {
         private static final Vector3d[] vector3ds = vectorDistribution(1000);
 
-        private final ClientWorld world;
+        private final ClientLevel world;
         private final float maxVolume;
 
         private int fadeSpeed;
@@ -93,8 +99,8 @@ public class WeatherSoundHandler implements IAmbientSoundHandler {
         private int fadeLimit = 40;
 
 
-        public Sound(SoundEvent sound, ClientWorld world, float volume, float pitch) {
-            super(sound, SoundCategory.WEATHER);
+        public Sound(SoundEvent sound, ClientLevel world, float volume, float pitch) {
+            super(sound, SoundSource.WEATHER, RandomSource.create());
             this.world = world;
             this.looping = true;
             this.delay = 0;
@@ -173,32 +179,33 @@ public class WeatherSoundHandler implements IAmbientSoundHandler {
                 this.stop();
             }
 
-            Vector3d startPos = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-            ClientPlayerEntity player = Minecraft.getInstance().player;
-            byte brightness = (byte) (this.world.getBrightness(LightType.SKY, new BlockPos(startPos.x, startPos.y, startPos.z)));
+            Vec3 startPos = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+            Player player = Minecraft.getInstance().player;
+            byte brightness = (byte) (this.world.getBrightness(LightLayer.SKY, new BlockPos(startPos.x, startPos.y, startPos.z)));
             int vectorDistance = 35;
             double maxDistanceNormalised = 0; //average sample distance
 
             //Cast ray in every direction sampled
             for (int i = 0, vector3dsLength = vector3ds.length; i < vector3dsLength; i++) {
-                Vector3d endPos = startPos.add(vector3ds[i].scale(vectorDistance));
-                BlockRayTraceResult result = world.clip(new RayTraceContext(startPos, endPos, RayTraceContext.BlockMode.COLLIDER, RayTraceContext.FluidMode.NONE, null));
+                vector3ds[i].scale(vectorDistance);
+                Vec3 endPos = startPos.add(vector3ds[i].x, vector3ds[i].y, vector3ds[i].z);
+                BlockHitResult result = world.clip(new ClipContext(startPos, endPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, null));
 
-                if (result.getType() == RayTraceResult.Type.MISS) {
+                if (result.getType() == HitResult.Type.MISS) {
                     maxDistanceNormalised += maxVolume; //if miss, assume max volume
                 }
 
-                Vector3d hitVec = result.getLocation();
-                Vector3d dif = startPos.subtract(hitVec);
+                Vec3 hitVec = result.getLocation();
+                Vec3 dif = startPos.subtract(hitVec);
                 float distance = (float) dif.length() / vectorDistance; //normalised distance
                 //distance is weighted such that longer distance count more, based on skylight brightness
-                maxDistanceNormalised += MathHelper.lerp(brightness / 15f, startPos.y < world.getSeaLevel() ? 0.0000000000001 : distance, Math.pow(distance, 1 / 4f /*Controls the weighting based on distance*/));
+                maxDistanceNormalised += Mth.lerp(brightness / 15f, startPos.y < world.getSeaLevel() ? 0.0000000000001 : distance, Math.pow(distance, 1 / 4f /*Controls the weighting based on distance*/));
             }
             this.decreasedVolume = (float) (maxDistanceNormalised / vector3ds.length) * (player.isEyeInFluid(FluidTags.WATER) || player.isEyeInFluid(FluidTags.LAVA) ? 0.2F : 1);
 
 
             this.fadeInTicks += this.fadeSpeed;
-            this.volume = MathHelper.clamp(world.getRainLevel(Minecraft.getInstance().getFrameTime()), 0.0F, decreasedVolume);
+            this.volume = Mth.clamp(world.getRainLevel(Minecraft.getInstance().getFrameTime()), 0.0F, decreasedVolume);
         }
 
         public void fadeOutSound() {

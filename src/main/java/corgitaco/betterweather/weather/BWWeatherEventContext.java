@@ -13,9 +13,7 @@ import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import corgitaco.betterweather.BetterWeather;
 import corgitaco.betterweather.api.BetterWeatherRegistry;
-import corgitaco.betterweather.api.Climate;
 import corgitaco.betterweather.api.client.WeatherEventClient;
-import corgitaco.betterweather.api.season.Season;
 import corgitaco.betterweather.api.weather.WeatherEvent;
 import corgitaco.betterweather.api.weather.WeatherEventContext;
 import corgitaco.betterweather.api.weather.WeatherEventSettings;
@@ -27,17 +25,17 @@ import corgitaco.betterweather.data.storage.WeatherEventSavedData;
 import corgitaco.betterweather.helpers.BiomeUpdate;
 import corgitaco.betterweather.util.TomlCommentedConfigOps;
 import corgitaco.betterweather.weather.event.None;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.util.RegistryKey;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.Util;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.world.GameRules;
-import net.minecraft.world.World;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.server.ServerWorld;
-import net.minecraft.world.storage.IServerWorldInfo;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.storage.ServerLevelData;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -87,7 +85,7 @@ public class BWWeatherEventContext implements WeatherEventContext {
     }
 
     //Server world constructor
-    public BWWeatherEventContext(WeatherEventSavedData weatherEventSavedData, RegistryKey<World> worldID, Registry<Biome> biomeRegistry) {
+    public BWWeatherEventContext(WeatherEventSavedData weatherEventSavedData, ResourceKey<Level> worldID, Registry<Biome> biomeRegistry) {
         this(weatherEventSavedData.getEvent(), weatherEventSavedData.isWeatherForced(), worldID.location(), biomeRegistry, null);
     }
 
@@ -131,7 +129,7 @@ public class BWWeatherEventContext implements WeatherEventContext {
     }
 
 
-    public void tick(World world) {
+    public void tick(Level world) {
         //TODO: Remove this check and figure out what could possibly be causing this and prevent it.
         if (this.weatherEvents.get(DEFAULT) == this.currentEvent && world.isRaining()) {
             world.getLevelData().setRaining(false);
@@ -139,46 +137,44 @@ public class BWWeatherEventContext implements WeatherEventContext {
 
         WeatherEvent prevEvent = this.currentEvent;
         boolean wasForced = this.weatherForced;
-        if (world instanceof ServerWorld) {
-            shuffleAndPickWeatherEvent(world);
+        if (world instanceof ServerLevel level) {
+            shuffleAndPickWeatherEvent(level);
         }
 
         if (prevEvent != this.currentEvent || wasForced != this.weatherForced) {
             onWeatherChange(world);
         }
-        if (world instanceof ServerWorld) {
-            this.currentEvent.worldTick((ServerWorld) world, world.getGameRules().getInt(GameRules.RULE_RANDOMTICKING), world.getGameTime());
+        if (world instanceof ServerLevel level) {
+            this.currentEvent.worldTick(level, world.getGameRules().getInt(GameRules.RULE_RANDOMTICKING), world.getGameTime());
         }
         if (world.isClientSide) {
-            this.getCurrentClientEvent().clientTick((ClientWorld) world, world.getGameRules().getInt(GameRules.RULE_RANDOMTICKING), world.getGameTime(), Minecraft.getInstance(), currentEvent::isValidBiome);
+            this.getCurrentClientEvent().clientTick((ClientLevel) world, world.getGameRules().getInt(GameRules.RULE_RANDOMTICKING), world.getGameTime(), Minecraft.getInstance(), currentEvent::isValidBiome);
         }
     }
 
-    private void onWeatherChange(World world) {
+    private void onWeatherChange(Level world) {
         ((BiomeUpdate) world).updateBiomeData();
         save(world);
-        if (world instanceof ServerWorld) {
-            ((IServerWorldInfo) world.getLevelData()).setThundering(this.currentEvent.isThundering());
-            sendPackets((ServerWorld) world);
+        if (world instanceof ServerLevel) {
+            ((ServerLevelData) world.getLevelData()).setThundering(this.currentEvent.isThundering());
+            sendPackets((ServerLevel) world);
         }
     }
 
-    private void sendPackets(ServerWorld world) {
+    private void sendPackets(ServerLevel world) {
         NetworkHandler.sendToAllPlayers(world.players(), new WeatherDataPacket(this));
         if (this.refreshRenderers) {
             NetworkHandler.sendToAllPlayers(world.players(), new RefreshRenderersPacket());
         }
     }
 
-    private void shuffleAndPickWeatherEvent(World world) {
+    private void shuffleAndPickWeatherEvent(Level world) {
         boolean isPrecipitation = world.getLevelData().isRaining();
-        Season season = ((Climate) world).getSeason();
-        boolean hasSeasons = season != null;
         float rainingStrength = world.rainLevel;
         if (isPrecipitation) {
             if (rainingStrength <= 0.02F) {
                 if (!this.weatherForced) {
-                    Random random = new Random(((ServerWorld) world).getSeed() + world.getGameTime());
+                    Random random = new Random(((ServerLevel) world).getSeed() + world.getGameTime());
                     ArrayList<String> list = new ArrayList<>(this.weatherEvents.keySet());
                     Collections.shuffle(list, random);
                     for (String entry : list) {
@@ -186,7 +182,7 @@ public class BWWeatherEventContext implements WeatherEventContext {
                             continue;
                         }
                         WeatherEvent weatherEvent = this.weatherEvents.get(entry);
-                        double chance = hasSeasons ? weatherEvent.getSeasonChances().getOrDefault(season.getKey(), new IdentityHashMap<>()).getOrDefault(season.getPhase(), weatherEvent.getDefaultChance()) : weatherEvent.getDefaultChance();
+                        double chance =  weatherEvent.getDefaultChance();
 
                         if (random.nextDouble() < chance || this.currentEvent == this.weatherEvents.get(DEFAULT)) {
                             this.currentEvent = weatherEvent;
@@ -203,17 +199,17 @@ public class BWWeatherEventContext implements WeatherEventContext {
         }
     }
 
-    private void save(World world) {
+    private void save(Level world) {
         WeatherEventSavedData weatherEventSavedData = WeatherEventSavedData.get(world);
         weatherEventSavedData.setEvent(this.currentEvent.getName());
         weatherEventSavedData.setWeatherForced(this.weatherForced);
     }
 
-    public WeatherEvent weatherForcer(String weatherEventName, int weatherEventLength, ServerWorld world) {
+    public WeatherEvent weatherForcer(String weatherEventName, int weatherEventLength, ServerLevel world) {
         this.currentEvent = this.weatherEvents.get(weatherEventName);
         this.weatherForced = true;
 
-        IServerWorldInfo worldInfo = (IServerWorldInfo) world.getLevelData();
+        ServerLevelData worldInfo = (ServerLevelData) world.getLevelData();
         boolean isDefault = weatherEventName.equals(DEFAULT);
 
         if (isDefault) {
@@ -366,7 +362,7 @@ public class BWWeatherEventContext implements WeatherEventContext {
         for (Map.Entry<ResourceLocation, WeatherEvent> entry : BetterWeatherRegistry.DEFAULT_EVENTS.entrySet()) {
             ResourceLocation location = entry.getKey();
             WeatherEvent event = entry.getValue();
-            Optional<RegistryKey<Codec<? extends WeatherEvent>>> optionalKey = BetterWeatherRegistry.WEATHER_EVENT.getResourceKey(event.codec());
+            Optional<ResourceKey<Codec<? extends WeatherEvent>>> optionalKey = BetterWeatherRegistry.WEATHER_EVENT.getResourceKey(event.codec());
 
             if (optionalKey.isPresent()) {
                 if (BetterWeatherConfig.SERIALIZE_AS_JSON) {
@@ -387,7 +383,7 @@ public class BWWeatherEventContext implements WeatherEventContext {
             String key = entry.getKey();
             File tomlFile = this.weatherEventsConfigPath.resolve(key + ".toml").toFile();
             File jsonFile = this.weatherEventsConfigPath.resolve(key + ".json").toFile();
-            Optional<RegistryKey<Codec<? extends WeatherEvent>>> optionalKey = BetterWeatherRegistry.WEATHER_EVENT.getResourceKey(event.codec());
+            Optional<ResourceKey<Codec<? extends WeatherEvent>>> optionalKey = BetterWeatherRegistry.WEATHER_EVENT.getResourceKey(event.codec());
 
             if (optionalKey.isPresent()) {
                 if (!tomlFile.exists() && !jsonFile.exists()) {

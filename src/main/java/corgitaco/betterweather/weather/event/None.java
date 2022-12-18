@@ -8,9 +8,9 @@ import corgitaco.betterweather.api.weather.WeatherEvent;
 import corgitaco.betterweather.api.weather.WeatherEventClientSettings;
 import corgitaco.betterweather.util.TomlCommentedConfigOps;
 import corgitaco.betterweather.weather.event.client.settings.NoneClientSettings;
-import net.minecraft.util.Util;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.server.ServerWorld;
+import net.minecraft.Util;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 
 import java.util.HashMap;
 
@@ -30,11 +30,11 @@ public class None extends WeatherEvent {
 
 
     public None(WeatherEventClientSettings clientSettings) {
-        super(clientSettings, "ALL", 0.0, 0.0, 0.0, false, 0, NO_SEASON_CHANCES);
+        super(clientSettings, "ALL", 0.0, 0.0, 0.0, false, 0);
     }
 
     @Override
-    public void worldTick(ServerWorld world, int tickSpeed, long worldTime) {
+    public void worldTick(ServerLevel world, int tickSpeed, long worldTime) {
 
     }
 

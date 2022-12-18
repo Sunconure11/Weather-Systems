@@ -1,21 +1,21 @@
 modLoader = "javafml"
-loaderVersion = "[36,)"
+loaderVersion = "[43,)"
 license = "LGPLv3"
-issueTrackerURL = "https://github.com/CorgiTaco/Better-Weather/issues"
+issueTrackerURL = ""
 [[mods]]
 modId = "betterweather"
-version = "2.0.1"
+version = "1.0.0"
 displayName = "Better Weather"
-displayURL = "https://www.curseforge.com/minecraft/mc-mods/better-weather/"
+displayURL = ""
 logoFile = "logo_text.png"
 credits = ""
-authors = "Corgi Taco"
+authors = "Corgi Taco, Mysticpasta1"
 description = '''
 A mod that adds more weather events! Some audio from: https://freesfx.co.uk/
 '''
 [[dependencies.betterweather]]
 modId = "forge"
 mandatory = true
-versionRange = "[36.0.5,)"
+versionRange = "[43.1.57,)"
 ordering = "NONE"
 side = "BOTH"

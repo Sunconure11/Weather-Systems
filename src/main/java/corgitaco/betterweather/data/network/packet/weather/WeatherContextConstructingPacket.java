@@ -4,14 +4,14 @@ import corgitaco.betterweather.helpers.BetterWeatherWorldData;
 import corgitaco.betterweather.helpers.BiomeUpdate;
 import corgitaco.betterweather.weather.BWWeatherEventContext;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.registry.Registry;
-import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.Registry;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkEvent;
 
-import java.io.IOException;
 import java.util.function.Supplier;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class WeatherContextConstructingPacket {
 
     private final BWWeatherEventContext bwWeatherEventContext;
@@ -20,21 +20,12 @@ public class WeatherContextConstructingPacket {
         this.bwWeatherEventContext = bwWeatherEventContext;
     }
 
-    public static void writeToPacket(WeatherContextConstructingPacket packet, PacketBuffer buf) {
-        try {
-            buf.writeWithCodec(BWWeatherEventContext.PACKET_CODEC, packet.bwWeatherEventContext);
-        } catch (IOException e) {
-            throw new IllegalStateException("Weather packet could not be written to. This is really really bad...\n\n" + e.getMessage());
-
-        }
+    public static void encode(WeatherContextConstructingPacket packet, FriendlyByteBuf buf) {
+        buf.writeWithCodec(BWWeatherEventContext.PACKET_CODEC, packet.bwWeatherEventContext);
     }
 
-    public static WeatherContextConstructingPacket readFromPacket(PacketBuffer buf) {
-        try {
-            return new WeatherContextConstructingPacket(buf.readWithCodec(BWWeatherEventContext.PACKET_CODEC));
-        } catch (IOException e) {
-            throw new IllegalStateException("Weather packet could not be read. This is really really bad...\n\n" + e.getMessage());
-        }
+    public static WeatherContextConstructingPacket decode(FriendlyByteBuf buf) {
+        return new WeatherContextConstructingPacket(buf.readWithCodec(BWWeatherEventContext.PACKET_CODEC));
     }
 
     public static void handle(WeatherContextConstructingPacket message, Supplier<NetworkEvent.Context> ctx) {
@@ -42,15 +33,18 @@ public class WeatherContextConstructingPacket {
             ctx.get().enqueueWork(() -> {
                 Minecraft minecraft = Minecraft.getInstance();
 
-                ClientWorld world = minecraft.level;
+                ClientLevel world = minecraft.level;
                 if (world != null && minecraft.player != null) {
                     BWWeatherEventContext weatherEventContext = ((BetterWeatherWorldData) world).getWeatherEventContext();
                     if (weatherEventContext == null) {
                         weatherEventContext = ((BetterWeatherWorldData) world).setWeatherEventContext(new BWWeatherEventContext(message.bwWeatherEventContext.getCurrentWeatherEventKey(),
                                 message.bwWeatherEventContext.isWeatherForced(), world.dimension().location(), world.registryAccess().registryOrThrow(Registry.BIOME_REGISTRY), message.bwWeatherEventContext.getWeatherEvents()));
-                        weatherEventContext.setCurrentEvent(message.bwWeatherEventContext.getCurrentEvent());
-                        ((BiomeUpdate) world).updateBiomeData();
+                        if(weatherEventContext != null) {
+                            weatherEventContext.setCurrentEvent(message.bwWeatherEventContext.getCurrentEvent());
+                            ((BiomeUpdate) world).updateBiomeData();
+                        }
                     } else {
+                        throw new UnsupportedOperationException("There is already a weather event context constructed for this world!");
                     }
                 }
             });

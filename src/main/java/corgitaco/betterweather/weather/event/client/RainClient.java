@@ -3,28 +3,29 @@ package corgitaco.betterweather.weather.event.client;
 import corgitaco.betterweather.api.client.WeatherEventClient;
 import corgitaco.betterweather.api.client.graphics.Graphics;
 import corgitaco.betterweather.weather.event.client.settings.RainClientSettings;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.CampfireBlock;
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.ActiveRenderInfo;
+import net.minecraft.client.ParticleStatus;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.settings.ParticleStatus;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.particles.IParticleData;
-import net.minecraft.particles.ParticleTypes;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.SimpleParticleType;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.FluidTags;
-import net.minecraft.util.Direction;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.SoundEvents;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.shapes.VoxelShape;
-import net.minecraft.world.IWorldReader;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.gen.Heightmap;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CampfireBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 import java.util.Random;
 import java.util.function.Predicate;
@@ -46,7 +47,7 @@ public class RainClient extends WeatherEventClient<RainClientSettings> {
             for (int j = 0; j < 32; ++j) {
                 float f = (float) (j - 16);
                 float f1 = (float) (i - 16);
-                float f2 = MathHelper.sqrt(f * f + f1 * f1);
+                float f2 = Mth.sqrt(f * f + f1 * f1);
                 this.rainSizeX[i << 5 | j] = -f1 / f2;
                 this.rainSizeZ[i << 5 | j] = f / f2;
             }
@@ -54,38 +55,38 @@ public class RainClient extends WeatherEventClient<RainClientSettings> {
     }
 
     @Override
-    public boolean renderWeatherShaders(Graphics graphics, ClientWorld world, double x, double y, double z) {
+    public boolean renderWeatherShaders(Graphics graphics, ClientLevel world, double x, double y, double z) {
         return false;
     }
 
     @Override
-    public boolean renderWeatherLegacy(Minecraft mc, ClientWorld world, LightTexture lightTexture, int ticks, float partialTicks, double x, double y, double z, Predicate<Biome> biomePredicate) {
+    public boolean renderWeatherLegacy(Minecraft mc, ClientLevel world, LightTexture lightTexture, int ticks, float partialTicks, double x, double y, double z, Predicate<Biome> biomePredicate) {
         renderVanillaWeather(mc, partialTicks, x, y, z, lightTexture, rainSizeX, rainSizeZ, this.rainTexture, this.snowTexture, ticks, biomePredicate);
         return true;
     }
 
     @Override
-    public boolean weatherParticlesAndSound(ActiveRenderInfo renderInfo, Minecraft mc, float ticks, Predicate<Biome> validBiomes) {
+    public boolean weatherParticlesAndSound(Camera renderInfo, Minecraft mc, float ticks, Predicate<Biome> validBiomes) {
         float particleStrength = mc.level.getRainLevel(1.0F) / (Minecraft.useFancyGraphics() ? 1.0F : 2.0F);
         if (!(particleStrength <= 0.0F)) {
             Random random = new Random((long) ticks * 312987231L);
-            IWorldReader worldReader = mc.level;
+            LevelReader worldReader = mc.level;
             BlockPos blockpos = new BlockPos(renderInfo.getPosition());
             BlockPos blockpos1 = null;
-            int particleCount = (int)(100.0F * particleStrength * particleStrength) / (mc.options.particles == ParticleStatus.DECREASED ? 2 : 1);
+            int particleCount = (int)(100.0F * particleStrength * particleStrength) / (mc.options.particles().get() == ParticleStatus.DECREASED ? 2 : 1);
 
             for(int particleCounter = 0; particleCounter < particleCount; ++particleCounter) {
                 int randomAddX = random.nextInt(21) - 10;
                 int randomAddZ = random.nextInt(21) - 10;
-                BlockPos motionBlockingHeightMinus1 = worldReader.getHeightmapPos(Heightmap.Type.MOTION_BLOCKING, blockpos.offset(randomAddX, 0, randomAddZ)).below();
-                Biome biome = worldReader.getBiome(motionBlockingHeightMinus1);
-                if (!validBiomes.test(biome)) {
+                BlockPos motionBlockingHeightMinus1 = worldReader.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, blockpos.offset(randomAddX, 0, randomAddZ)).below();
+                Holder<Biome> biome = worldReader.getBiome(motionBlockingHeightMinus1);
+                if (!validBiomes.test(biome.value())) {
                     continue;
                 }
 
-                if (motionBlockingHeightMinus1.getY() > 0 && motionBlockingHeightMinus1.getY() <= blockpos.getY() + 10 && motionBlockingHeightMinus1.getY() >= blockpos.getY() - 10 && biome.getPrecipitation() == Biome.RainType.RAIN && biome.getTemperature(motionBlockingHeightMinus1) >= 0.15F) {
+                if (motionBlockingHeightMinus1.getY() > 0 && motionBlockingHeightMinus1.getY() <= blockpos.getY() + 10 && motionBlockingHeightMinus1.getY() >= blockpos.getY() - 10 && biome.value().getPrecipitation() == Biome.Precipitation.RAIN && biome.value().getBaseTemperature() >= 0.15F) {
                     blockpos1 = motionBlockingHeightMinus1;
-                    if (mc.options.particles == ParticleStatus.MINIMAL) {
+                    if (mc.options.particles().get() == ParticleStatus.MINIMAL) {
                         break;
                     }
 
@@ -103,10 +104,10 @@ public class RainClient extends WeatherEventClient<RainClientSettings> {
 
             if (blockpos1 != null && random.nextInt(3) < this.rainSoundTime++) {
                 this.rainSoundTime = 0;
-                if (blockpos1.getY() > blockpos.getY() + 1 && worldReader.getHeightmapPos(Heightmap.Type.MOTION_BLOCKING, blockpos).getY() > MathHelper.floor((float)blockpos.getY())) {
-                    mc.level.playLocalSound(blockpos1, SoundEvents.WEATHER_RAIN_ABOVE, SoundCategory.WEATHER, 0.1F, 0.5F, false);
+                if (blockpos1.getY() > blockpos.getY() + 1 && worldReader.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, blockpos).getY() > Mth.floor((float)blockpos.getY())) {
+                    mc.level.playLocalSound(blockpos1, SoundEvents.WEATHER_RAIN_ABOVE, SoundSource.WEATHER, 0.1F, 0.5F, false);
                 } else {
-                    mc.level.playLocalSound(blockpos1, SoundEvents.WEATHER_RAIN, SoundCategory.WEATHER, 0.2F, 1.0F, false);
+                    mc.level.playLocalSound(blockpos1, SoundEvents.WEATHER_RAIN, SoundSource.WEATHER, 0.2F, 1.0F, false);
                 }
             }
         }
@@ -114,7 +115,7 @@ public class RainClient extends WeatherEventClient<RainClientSettings> {
     }
 
     protected void addParticlesToWorld(Minecraft mc, BlockPos motionBlockingHeightMinus1, double randDouble, double randDouble2, BlockState blockstate, FluidState fluidstate, double particleMaxAddedY) {
-        IParticleData iparticledata = !fluidstate.is(FluidTags.LAVA) && !blockstate.is(Blocks.MAGMA_BLOCK) && !CampfireBlock.isLitCampfire(blockstate) ? ParticleTypes.RAIN : ParticleTypes.SMOKE;
+        SimpleParticleType iparticledata = !fluidstate.is(FluidTags.LAVA) && !blockstate.is(Blocks.MAGMA_BLOCK) && !CampfireBlock.isLitCampfire(blockstate) ? ParticleTypes.RAIN : ParticleTypes.SMOKE;
         mc.level.addParticle(iparticledata, (double) motionBlockingHeightMinus1.getX() + randDouble, (double) motionBlockingHeightMinus1.getY() + particleMaxAddedY, (double) motionBlockingHeightMinus1.getZ() + randDouble2, 0.0D, 0.0D, 0.0D);
     }
 
@@ -124,7 +125,7 @@ public class RainClient extends WeatherEventClient<RainClientSettings> {
     }
 
     @Override
-    public void clientTick(ClientWorld world, int tickSpeed, long worldTime, Minecraft mc, Predicate<Biome> biomePredicate) {
+    public void clientTick(ClientLevel world, int tickSpeed, long worldTime, Minecraft mc, Predicate<Biome> biomePredicate) {
 
     }
 }

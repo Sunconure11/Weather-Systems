@@ -4,24 +4,22 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import corgitaco.betterweather.api.client.ColorSettings;
-import corgitaco.betterweather.api.season.Season;
 import corgitaco.betterweather.api.weather.WeatherEvent;
 import corgitaco.betterweather.api.weather.WeatherEventClientSettings;
 import corgitaco.betterweather.util.TomlCommentedConfigOps;
 import corgitaco.betterweather.util.client.ColorUtil;
 import corgitaco.betterweather.weather.event.client.settings.RainClientSettings;
-import net.minecraft.block.Blocks;
-import net.minecraft.util.IStringSerializable;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.Util;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.gen.Heightmap;
-import net.minecraft.world.server.ServerWorld;
+import net.minecraft.Util;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.levelgen.Heightmap;
 
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,8 +40,6 @@ public class Rain extends WeatherEvent {
             return rain.isThundering();
         }), Codec.INT.fieldOf("lightningChance").forGetter(rain -> {
             return rain.getLightningChance();
-        }), Codec.simpleMap(Season.Key.CODEC, Codec.unboundedMap(Season.Phase.CODEC, Codec.DOUBLE), IStringSerializable.keys(Season.Key.values())).fieldOf("seasonChances").forGetter(rain -> {
-            return rain.getSeasonChances();
         })).apply(builder, Rain::new);
     });
 
@@ -64,89 +60,39 @@ public class Rain extends WeatherEvent {
 
     public static final String DEFAULT_BIOME_CONDITION = "!#DESERT#SAVANNA#NETHER#THEEND";
 
-    public static final Rain DEFAULT = new Rain(new RainClientSettings(RAIN_COLORS, 0.0F, -1.0F, true, RAIN_LOCATION, SNOW_LOCATION), DEFAULT_BIOME_CONDITION, 0.7D, !MODIFY_TEMPERATURE ? 0.0 : -0.1, 0.1, false, 0,
-            Util.make(new EnumMap<>(Season.Key.class), (seasons) -> {
-                seasons.put(Season.Key.SPRING, Util.make(new EnumMap<>(Season.Phase.class), (phases) -> {
-                    phases.put(Season.Phase.START, 0.7);
-                    phases.put(Season.Phase.MID, 0.8);
-                    phases.put(Season.Phase.END, 0.5);
-                }));
+    public static final Rain DEFAULT = new Rain(new RainClientSettings(RAIN_COLORS, 0.0F, -1.0F, true, RAIN_LOCATION, SNOW_LOCATION), DEFAULT_BIOME_CONDITION, 0.7D, !MODIFY_TEMPERATURE ? 0.0 : -0.1, 0.1, false, 0);
 
-                seasons.put(Season.Key.SUMMER, Util.make(new EnumMap<>(Season.Phase.class), (phases) -> {
-                    phases.put(Season.Phase.START, 0.1);
-                    phases.put(Season.Phase.MID, 0.0);
-                    phases.put(Season.Phase.END, 0.0);
-                }));
+    public static final Rain DEFAULT_THUNDERING = new Rain(new RainClientSettings(THUNDER_COLORS, 0.0F, -1.0F, true, RAIN_LOCATION, SNOW_LOCATION), DEFAULT_BIOME_CONDITION, 0.3D, !MODIFY_TEMPERATURE ? 0.0 : -0.5, 0.1, true, 100000);
 
-                seasons.put(Season.Key.AUTUMN, Util.make(new EnumMap<>(Season.Phase.class), (phases) -> {
-                    phases.put(Season.Phase.START, 0.1);
-                    phases.put(Season.Phase.MID, 0.1);
-                    phases.put(Season.Phase.END, 0.1);
-                }));
-
-                seasons.put(Season.Key.WINTER, Util.make(new EnumMap<>(Season.Phase.class), (phases) -> {
-                    phases.put(Season.Phase.START, 0.1);
-                    phases.put(Season.Phase.MID, 0.1);
-                    phases.put(Season.Phase.END, 0.2);
-                }));
-            }));
-
-    public static final Rain DEFAULT_THUNDERING = new Rain(new RainClientSettings(THUNDER_COLORS, 0.0F, -1.0F, true, RAIN_LOCATION, SNOW_LOCATION), DEFAULT_BIOME_CONDITION, 0.3D, !MODIFY_TEMPERATURE ? 0.0 : -0.5, 0.1, true, 100000,
-            Util.make(new EnumMap<>(Season.Key.class), (seasons) -> {
-                seasons.put(Season.Key.SPRING, Util.make(new EnumMap<>(Season.Phase.class), (phases) -> {
-                    phases.put(Season.Phase.START, 0.35);
-                    phases.put(Season.Phase.MID, 0.4);
-                    phases.put(Season.Phase.END, 0.25);
-                }));
-
-                seasons.put(Season.Key.SUMMER, Util.make(new EnumMap<>(Season.Phase.class), (phases) -> {
-                    phases.put(Season.Phase.START, 0.05);
-                    phases.put(Season.Phase.MID, 0.0);
-                    phases.put(Season.Phase.END, 0.0);
-                }));
-
-                seasons.put(Season.Key.AUTUMN, Util.make(new EnumMap<>(Season.Phase.class), (phases) -> {
-                    phases.put(Season.Phase.START, 0.05);
-                    phases.put(Season.Phase.MID, 0.05);
-                    phases.put(Season.Phase.END, 0.05);
-                }));
-
-                seasons.put(Season.Key.WINTER, Util.make(new EnumMap<>(Season.Phase.class), (phases) -> {
-                    phases.put(Season.Phase.START, 0.05);
-                    phases.put(Season.Phase.MID, 0.05);
-                    phases.put(Season.Phase.END, 0.1);
-                }));
-            }));
-
-    public Rain(WeatherEventClientSettings clientSettings, String biomeCondition, double defaultChance, double temperatureOffsetRaw, double humidityOffsetRaw, boolean isThundering, int lightningFrequency, Map<Season.Key, Map<Season.Phase, Double>> seasonChance) {
-        super(clientSettings, biomeCondition, defaultChance, temperatureOffsetRaw, humidityOffsetRaw, isThundering, lightningFrequency, seasonChance);
+    public Rain(WeatherEventClientSettings clientSettings, String biomeCondition, double defaultChance, double temperatureOffsetRaw, double humidityOffsetRaw, boolean isThundering, int lightningFrequency) {
+        super(clientSettings, biomeCondition, defaultChance, temperatureOffsetRaw, humidityOffsetRaw, isThundering, lightningFrequency);
     }
 
     @Override
-    public void worldTick(ServerWorld world, int tickSpeed, long worldTime) {
+    public void worldTick(ServerLevel world, int tickSpeed, long worldTime) {
     }
 
     @Override
-    public void chunkTick(Chunk chunk, ServerWorld world) {
+    public void chunkTick(LevelChunk chunk, ServerLevel world) {
         if (world.random.nextInt(16) == 0) {
             ChunkPos chunkpos = chunk.getPos();
             int xStart = chunkpos.getMinBlockX();
             int zStart = chunkpos.getMinBlockZ();
-            BlockPos randomPos = world.getHeightmapPos(Heightmap.Type.MOTION_BLOCKING, world.getBlockRandomPos(xStart, 0, zStart, 15));
+            BlockPos randomPos = world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, world.getBlockRandomPos(xStart, 0, zStart, 15));
             BlockPos randomPosDown = randomPos.below();
 
-            Biome biome = world.getBiome(randomPos);
-            if (isValidBiome(biome)) {
-                if (spawnSnowInFreezingClimates() && biome.shouldFreeze(world, randomPosDown)) {
+            Holder<Biome> biome = world.getBiome(randomPos);
+            if (isValidBiome(biome.value())) {
+                if (spawnSnowInFreezingClimates() && biome.value().shouldFreeze(world, randomPosDown)) {
                     world.setBlockAndUpdate(randomPosDown, Blocks.ICE.defaultBlockState());
                 }
 
-                if (spawnSnowInFreezingClimates() && biome.shouldSnow(world, randomPos)) {
+                if (spawnSnowInFreezingClimates() && biome.value().shouldSnow(world, randomPos)) {
                     world.setBlockAndUpdate(randomPos, Blocks.SNOW.defaultBlockState());
                 }
 
                 if (world.isRainingAt(randomPos.above(25)) && fillBlocksWithWater()) {
-                    world.getBlockState(randomPosDown).getBlock().handleRain(world, randomPosDown);
+                    world.getBlockState(randomPosDown).getBlock().handlePrecipitation(world.getBlockState(randomPosDown), world, randomPosDown, Biome.Precipitation.RAIN);
                 }
             }
         }

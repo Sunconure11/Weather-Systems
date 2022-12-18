@@ -1,6 +1,6 @@
 package corgitaco.betterweather.api.weather;
 
-import net.minecraft.util.SoundEvent;
+import net.minecraft.sounds.SoundEvent;
 
 public interface WeatherEventAudio {
 

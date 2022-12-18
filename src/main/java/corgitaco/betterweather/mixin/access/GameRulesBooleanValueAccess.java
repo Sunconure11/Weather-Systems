@@ -1,6 +1,6 @@
 package corgitaco.betterweather.mixin.access;
 
-import net.minecraft.world.GameRules;
+import net.minecraft.world.level.GameRules;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 public interface GameRulesBooleanValueAccess {
 
     @Invoker
-    static GameRules.RuleType<GameRules.BooleanValue> invokeCreate(boolean defaultValue) {
+    static GameRules.Type<GameRules.BooleanValue> invokeCreate(boolean defaultValue) {
         throw new Error("Mixin did not apply");
     }
 }

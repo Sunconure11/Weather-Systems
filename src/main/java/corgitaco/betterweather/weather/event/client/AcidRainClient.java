@@ -1,11 +1,11 @@
 package corgitaco.betterweather.weather.event.client;
 
 import corgitaco.betterweather.weather.event.client.settings.AcidRainClientSettings;
-import net.minecraft.block.BlockState;
 import net.minecraft.client.Minecraft;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.particles.ParticleTypes;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
 
 public class AcidRainClient extends RainClient {
 

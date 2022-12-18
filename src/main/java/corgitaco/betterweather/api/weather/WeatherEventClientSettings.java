@@ -4,8 +4,8 @@ import com.mojang.serialization.Codec;
 import corgitaco.betterweather.api.BetterWeatherRegistry;
 import corgitaco.betterweather.api.client.ColorSettings;
 import corgitaco.betterweather.api.client.WeatherEventClient;
-import net.minecraft.util.Util;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.Util;
+import net.minecraft.util.Mth;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -13,7 +13,7 @@ import java.util.function.Function;
 
 public abstract class WeatherEventClientSettings {
 
-    public static final Codec<WeatherEventClientSettings> CODEC = BetterWeatherRegistry.CLIENT_WEATHER_EVENT_SETTINGS.dispatchStable(WeatherEventClientSettings::codec, Function.identity());
+    public static final Codec<WeatherEventClientSettings> CODEC = BetterWeatherRegistry.CLIENT_WEATHER_EVENT_SETTINGS.byNameCodec().dispatchStable(WeatherEventClientSettings::codec, Function.identity());
 
     private final ColorSettings colorSettings;
     private final float skyOpacity;
@@ -42,7 +42,7 @@ public abstract class WeatherEventClientSettings {
     }
 
     public float skyOpacity() {
-        return MathHelper.clamp(skyOpacity, 0.0F, 1.0F);
+        return Mth.clamp(skyOpacity, 0.0F, 1.0F);
     }
 
     public float dayLightDarkness() {

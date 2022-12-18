@@ -1,13 +1,14 @@
 package corgitaco.betterweather.api.client.graphics.opengl.program;
 
+import com.mojang.math.Matrix4f;
 import corgitaco.betterweather.BetterWeather;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import net.minecraft.util.math.vector.Matrix4f;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.lwjgl.system.MemoryStack;
 
+import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.util.function.Consumer;
 
@@ -19,7 +20,7 @@ public final class ShaderProgram extends Program {
 
     private final ShaderProgramBuilder builder;
 
-    protected ShaderProgram(ShaderProgramBuilder builder) {
+    ShaderProgram(ShaderProgramBuilder builder) {
         this.builder = builder;
 
         try {
@@ -48,7 +49,7 @@ public final class ShaderProgram extends Program {
     }
 
     public int getOrMapUniform(String uniform) {
-        return uniforms.computeIfAbsent(uniform, key -> glGetUniformLocation(program, key));
+        return uniforms.computeIfAbsent(uniform, key -> glGetUniformLocation(program, (String) key));
     }
 
     public void uploadFloat(String uniform, float f) {

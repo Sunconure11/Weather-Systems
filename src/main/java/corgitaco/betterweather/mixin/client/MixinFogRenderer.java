@@ -4,11 +4,11 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import corgitaco.betterweather.api.weather.WeatherEvent;
 import corgitaco.betterweather.helpers.BetterWeatherWorldData;
 import corgitaco.betterweather.weather.BWWeatherEventContext;
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.ActiveRenderInfo;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.FogRenderer;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.Mth;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -18,22 +18,22 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(FogRenderer.class)
 public abstract class MixinFogRenderer {
 
-    @Redirect(method = "setupColor", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/world/ClientWorld;getRainLevel(F)F"))
-    private static float doNotDarkenFogWithRainStrength(ClientWorld world, float delta) {
+    @Redirect(method = "setupColor", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/ClientLevel;getRainLevel(F)F"))
+    private static float doNotDarkenFogWithRainStrength(ClientLevel world, float delta) {
         return ((BetterWeatherWorldData) world).getWeatherEventContext() != null ? 0.0F : world.getRainLevel(delta);
     }
 
-    @Inject(method = "setupFog(Lnet/minecraft/client/renderer/ActiveRenderInfo;Lnet/minecraft/client/renderer/FogRenderer$FogType;FZF)V", at = @At("HEAD"), cancellable = true, remap = false)
-    private static void forceWeather(ActiveRenderInfo activeRenderInfoIn, FogRenderer.FogType fogTypeIn, float farPlaneDistance, boolean nearFog, float partialticks, CallbackInfo ci) {
-        ClientWorld world = Minecraft.getInstance().level;
+    @Inject(method = "setupFog", at = @At("HEAD"), cancellable = true, remap = false)
+    private static void forceWeather(Camera p_234173_, FogRenderer.FogMode p_234174_, float p_234175_, boolean p_234176_, float p_234177_, CallbackInfo ci) {
+        ClientLevel world = Minecraft.getInstance().level;
         BWWeatherEventContext weatherEventContext = ((BetterWeatherWorldData) world).getWeatherEventContext();
         if (weatherEventContext != null) {
             WeatherEvent currentEvent = weatherEventContext.getCurrentEvent();
             float currentFogDensity = currentEvent.getClientSettings().fogDensity();
-            float blendedFogDensity = weatherEventContext.getCurrentClientEvent().fogDensity(world, activeRenderInfoIn.getBlockPosition(), currentEvent::isValidBiome);
+            float blendedFogDensity = weatherEventContext.getCurrentClientEvent().fogDensity(world, p_234173_.getBlockPosition(), currentEvent::isValidBiome);
 
             if (currentFogDensity != -1.0F && blendedFogDensity > 0.0F) {
-                RenderSystem.fogDensity(MathHelper.lerp(activeRenderInfoIn.getEntity().level.getRainLevel(Minecraft.getInstance().getFrameTime()), 0.0F, blendedFogDensity));
+                RenderSystem.setShaderFogStart(Mth.lerp(p_234173_.getEntity().level.getRainLevel(Minecraft.getInstance().getFrameTime()), 0.0F, blendedFogDensity));
                 ci.cancel();
             }
         }

@@ -1,62 +1,50 @@
 package corgitaco.betterweather.data.storage;
 
 import corgitaco.betterweather.BetterWeather;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.IWorld;
-import net.minecraft.world.server.ServerWorld;
-import net.minecraft.world.storage.DimensionSavedDataManager;
-import net.minecraft.world.storage.WorldSavedData;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.storage.DimensionDataStorage;
+import org.jetbrains.annotations.NotNull;
 
-public class WeatherEventSavedData extends WorldSavedData {
+public class WeatherEventSavedData extends SavedData {
     public static String DATA_NAME = new ResourceLocation(BetterWeather.MOD_ID, "weather_event_data").toString();
     private boolean isWeatherForced;
-    private boolean modified;
     private String event;
 
     public WeatherEventSavedData() {
-        super(DATA_NAME);
-    }
-
-    public WeatherEventSavedData(String s) {
-        super(s);
+        super();
     }
 
     private static WeatherEventSavedData clientCache = new WeatherEventSavedData();
-    private static ClientWorld worldCache = null;
+    private static ClientLevel worldCache = null;
 
-    public static WeatherEventSavedData get(IWorld world) {
-        if (!(world instanceof ServerWorld)) {
+    public static WeatherEventSavedData get(Level world) {
+        if (!(world instanceof ServerLevel)) {
             if (worldCache != world) {
-                worldCache = (ClientWorld) world;
+                worldCache = (ClientLevel) world;
                 clientCache = new WeatherEventSavedData();
             }
             return clientCache;
         }
-        DimensionSavedDataManager data = ((ServerWorld) world).getDataStorage();
-        WeatherEventSavedData weatherData = data.computeIfAbsent(WeatherEventSavedData::new, DATA_NAME);
+        DimensionDataStorage data = ((ServerLevel) world).getDataStorage();
+        WeatherEventSavedData weatherData = data.computeIfAbsent(compoundTag -> new WeatherEventSavedData(), WeatherEventSavedData::new, DATA_NAME);
 
         if (weatherData == null) {
             weatherData = new WeatherEventSavedData();
-            data.set(weatherData);
+            data.set(DATA_NAME, weatherData);
         }
 
         return weatherData;
     }
 
     @Override
-    public void load(CompoundNBT nbt) {
-        setEvent(nbt.getString("Event"));
-        setWeatherForced(nbt.getBoolean("Forced"));
-        setModified(nbt.getBoolean("Modified"));
-    }
-
-    @Override
-    public CompoundNBT save(CompoundNBT compound) {
+    public @NotNull CompoundTag save(CompoundTag compound) {
         compound.putString("Event", event);
         compound.putBoolean("Forced", isWeatherForced);
-        compound.putBoolean("Modified", modified);
         return compound;
     }
 
@@ -75,15 +63,6 @@ public class WeatherEventSavedData extends WorldSavedData {
 
     public void setWeatherForced(boolean weatherForced) {
         isWeatherForced = weatherForced;
-        setDirty();
-    }
-
-    public boolean isModified() {
-        return modified;
-    }
-
-    public void setModified(boolean modified) {
-        this.modified = modified;
         setDirty();
     }
 }

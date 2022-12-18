@@ -1,9 +1,11 @@
 package corgitaco.betterweather.mixin.biome;
 
 import corgitaco.betterweather.api.BiomeClimate;
+import corgitaco.betterweather.helpers.BiomeHelper;
 import corgitaco.betterweather.helpers.BiomeModifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.biome.Biome;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.Climate;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -17,65 +19,45 @@ public abstract class MixinBiome implements BiomeModifier, BiomeClimate {
 
     @Shadow
     @Final
-    private Biome.Climate climateSettings;
+    private Biome.ClimateSettings climateSettings;
 
     @Inject(method = "getDownfall", at = @At("RETURN"), cancellable = true)
     private void modifyDownfall(CallbackInfoReturnable<Float> cir) {
-        cir.setReturnValue(this.climateSettings.downfall + (float) ((BiomeClimate) climateSettings).getHumidityModifier());
+        cir.setReturnValue(this.climateSettings.downfall() + (float) new BiomeHelper().getHumidityModifier());
     }
 
     @Inject(method = "getTemperature", at = @At("RETURN"), cancellable = true)
     private void modifyTemperature(CallbackInfoReturnable<Float> cir) {
-        cir.setReturnValue(this.climateSettings.temperature + (float) ((BiomeClimate) climateSettings).getTemperatureModifier());
+        cir.setReturnValue(this.climateSettings.temperature() + (float) new BiomeHelper().getTemperatureModifier());
     }
 
     @Override
     public double getTemperatureModifier() {
-        return ((BiomeClimate) climateSettings).getTemperatureModifier();
-    }
-
-    @Override
-    public double getSeasonTemperatureModifier() {
-        return ((BiomeClimate) climateSettings).getSeasonTemperatureModifier();
+        return new BiomeHelper().getTemperatureModifier();
     }
 
     @Override
     public double getWeatherTemperatureModifier(BlockPos pos) {
-        return ((BiomeClimate) climateSettings).getWeatherTemperatureModifier(pos);
+        return new BiomeHelper().getWeatherTemperatureModifier(pos);
     }
 
     @Override
     public double getHumidityModifier() {
-        return ((BiomeClimate) climateSettings).getHumidityModifier();
-    }
-
-    @Override
-    public double getSeasonHumidityModifier() {
-        return ((BiomeClimate) climateSettings).getSeasonHumidityModifier();
+        return new BiomeHelper().getHumidityModifier();
     }
 
     @Override
     public double getWeatherHumidityModifier(BlockPos pos) {
-        return ((BiomeClimate) climateSettings).getWeatherHumidityModifier(pos);
-    }
-
-    @Override
-    public void setSeasonTempModifier(float tempModifier) {
-        ((BiomeModifier) this.climateSettings).setSeasonTempModifier(tempModifier);
-    }
-
-    @Override
-    public void setSeasonHumidityModifier(float humidityModifier) {
-        ((BiomeModifier) this.climateSettings).setSeasonHumidityModifier(humidityModifier);
+        return new BiomeHelper().getWeatherHumidityModifier(pos);
     }
 
     @Override
     public void setWeatherTempModifier(float tempModifier) {
-        ((BiomeModifier) this.climateSettings).setWeatherTempModifier(tempModifier);
+        new BiomeHelper().setWeatherTempModifier(tempModifier);
     }
 
     @Override
     public void setWeatherHumidityModifier(float humidityModifier) {
-        ((BiomeModifier) this.climateSettings).setWeatherHumidityModifier(humidityModifier);
+        new BiomeHelper().setWeatherHumidityModifier(humidityModifier);
     }
 }

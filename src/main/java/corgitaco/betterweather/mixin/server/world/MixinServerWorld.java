@@ -1,134 +1,72 @@
 package corgitaco.betterweather.mixin.server.world;
 
-import corgitaco.betterweather.BetterWeather;
 import corgitaco.betterweather.api.Climate;
-import corgitaco.betterweather.api.season.Season;
 import corgitaco.betterweather.api.weather.WeatherEvent;
-import corgitaco.betterweather.config.BetterWeatherConfig;
-import corgitaco.betterweather.data.storage.SeasonSavedData;
-import corgitaco.betterweather.data.storage.WeatherEventSavedData;
 import corgitaco.betterweather.helpers.BetterWeatherWorldData;
 import corgitaco.betterweather.helpers.BiomeModifier;
 import corgitaco.betterweather.helpers.BiomeUpdate;
-import corgitaco.betterweather.mixin.access.ChunkManagerAccess;
-import corgitaco.betterweather.mixin.access.ServerChunkProviderAccess;
-import corgitaco.betterweather.mixin.access.ServerWorldAccess;
-import corgitaco.betterweather.season.SeasonContext;
-import corgitaco.betterweather.util.WorldDynamicRegistry;
 import corgitaco.betterweather.weather.BWWeatherEventContext;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.effect.LightningBoltEntity;
-import net.minecraft.entity.passive.horse.SkeletonHorseEntity;
-import net.minecraft.nbt.INBT;
-import net.minecraft.nbt.NBTDynamicOps;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.RegistryKey;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.util.registry.DynamicRegistries;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.WorldSettingsImport;
+import net.minecraft.server.level.ServerChunkCache;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.progress.ChunkProgressListener;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.DifficultyInstance;
-import net.minecraft.world.DimensionType;
-import net.minecraft.world.GameRules;
-import net.minecraft.world.World;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.chunk.listener.IChunkStatusListener;
-import net.minecraft.world.gen.ChunkGenerator;
-import net.minecraft.world.server.ServerChunkProvider;
-import net.minecraft.world.server.ServerWorld;
-import net.minecraft.world.spawner.ISpecialSpawner;
-import net.minecraft.world.storage.IServerWorldInfo;
-import net.minecraft.world.storage.SaveFormat;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.world.entity.animal.horse.SkeletonHorse;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.dimension.LevelStem;
+import net.minecraft.world.level.storage.LevelStorageSource;
+import net.minecraft.world.level.storage.ServerLevelData;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.injection.*;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 
-@Mixin(ServerWorld.class)
+@Mixin(ServerLevel.class)
 public abstract class MixinServerWorld implements BiomeUpdate, BetterWeatherWorldData, Climate {
 
     @Shadow
     @Final
-    private ServerChunkProvider chunkSource;
+    private ServerChunkCache chunkSource;
 
-    private DynamicRegistries registry;
-
-    @Nullable
-    private SeasonContext seasonContext;
+    @Shadow public abstract RegistryAccess registryAccess();
 
     @Nullable
     private BWWeatherEventContext weatherContext;
 
-    @SuppressWarnings("ALL")
     @Inject(method = "<init>", at = @At("RETURN"))
-    private void storeUpgradablePerWorldRegistry(MinecraftServer server, Executor executor, SaveFormat.LevelSave save, IServerWorldInfo worldInfo, RegistryKey<World> key, DimensionType dimensionType, IChunkStatusListener statusListener, ChunkGenerator generator, boolean b, long seed, List<ISpecialSpawner> specialSpawners, boolean b1, CallbackInfo ci) {
-        ResourceLocation worldKeyLocation = key.location();
-        boolean hasPerWorldRegistry = Stream.concat(BetterWeatherConfig.WEATHER_EVENT_DIMENSIONS.stream(), BetterWeatherConfig.SEASON_DIMENSIONS.stream()).collect(Collectors.toSet()).size() > 1;
-
-        boolean isValidWeatherEventDimension = BetterWeatherConfig.WEATHER_EVENT_DIMENSIONS.contains(worldKeyLocation.toString());
-        boolean isValidSeasonDimension = BetterWeatherConfig.SEASON_DIMENSIONS.contains(worldKeyLocation.toString());
-
-        if (hasPerWorldRegistry && (isValidWeatherEventDimension || isValidSeasonDimension)) {
-            this.registry = new WorldDynamicRegistry((DynamicRegistries.Impl) server.registryAccess());
-            BetterWeather.LOGGER.warn("Swapping server world gen datapack registry for \"" + key.location().toString() + "\" to a per world registry... This may have unintended side effects like mod incompatibilities in this world...");
-
-            // Reload the world settings import with OUR implementation of the registry.
-            WorldSettingsImport<INBT> worldSettingsImport = WorldSettingsImport.create(NBTDynamicOps.INSTANCE, server.getDataPackRegistries().getResourceManager(), (DynamicRegistries.Impl) this.registry);
-            ChunkGenerator dimensionChunkGenerator = save.getDataTag(worldSettingsImport, server.getWorldData().getDataPackConfig()).worldGenSettings().dimensions().getOptional(worldKeyLocation).get().generator();
-
-            // Reset the chunk generator fields in both the chunk provider and chunk manager. This is required for chunk generators to return the current biome object type required by our registry.
-            // TODO: Do this earlier so mods mixing here can capture our version of the chunk generator.
-            BetterWeather.LOGGER.warn("Swapping chunk generator for \"" + key.location().toString() + "\" to use the per world registry... This may have unintended side effects like mod incompatibilities in this world...");
-            ((ServerChunkProviderAccess) this.chunkSource).setGenerator(dimensionChunkGenerator);
-            ((ChunkManagerAccess) this.chunkSource.chunkMap).setGenerator(dimensionChunkGenerator);
-            BetterWeather.LOGGER.info("Swapped the chunk generator for \"" + key.location().toString() + "\" to use the per world registry!");
-
-            BetterWeather.LOGGER.info("Swapped world gen datapack registry for \"" + key.location().toString() + "\" to the per world registry!");
-        } else {
-            this.registry = server.registryAccess();
-        }
-
-        if (isValidWeatherEventDimension) {
-            this.weatherContext = new BWWeatherEventContext(WeatherEventSavedData.get((ServerWorld) (Object) this), key, this.registry.registryOrThrow(Registry.BIOME_REGISTRY));
-        }
-
-        if (isValidSeasonDimension) {
-            this.seasonContext = new SeasonContext(SeasonSavedData.get((ServerWorld) (Object) this), key, this.registry.registryOrThrow(Registry.BIOME_REGISTRY));
-        }
-
+    private void storeUpgradablePerWorldRegistry(MinecraftServer p_214999_, Executor p_215000_, LevelStorageSource.LevelStorageAccess p_215001_, ServerLevelData p_215002_, ResourceKey p_215003_, LevelStem p_215004_, ChunkProgressListener p_215005_, boolean p_215006_, long p_215007_, List p_215008_, boolean p_215009_, CallbackInfo ci) {
         updateBiomeData();
     }
 
     @SuppressWarnings("ConstantConditions")
     @Override
     public void updateBiomeData() {
-        List<Biome> validBiomes = this.chunkSource.getGenerator().getBiomeSource().possibleBiomes();
-        for (Map.Entry<RegistryKey<Biome>, Biome> entry : this.registry.registryOrThrow(Registry.BIOME_REGISTRY).entrySet()) {
+        Set<Holder<Biome>> validBiomes = this.chunkSource.getGenerator().getBiomeSource().possibleBiomes();
+        for (Map.Entry<ResourceKey<Biome>, Biome> entry : this.registryAccess().registryOrThrow(Registry.BIOME_REGISTRY).entrySet()) {
             Biome biome = entry.getValue();
-            RegistryKey<Biome> biomeKey = entry.getKey();
-
-            if (seasonContext != null && validBiomes.contains(biome)) {
-                float seasonHumidityModifier = (float) this.seasonContext.getCurrentSubSeasonSettings().getHumidityModifier(biomeKey);
-                float seasonTemperatureModifier = (float) this.seasonContext.getCurrentSubSeasonSettings().getTemperatureModifier(biomeKey);
-                ((BiomeModifier) (Object) biome).setSeasonTempModifier(seasonTemperatureModifier);
-                ((BiomeModifier) (Object) biome).setSeasonHumidityModifier(seasonHumidityModifier);
-            }
+            ResourceKey<Biome> biomeKey = entry.getKey();
 
             if (weatherContext != null && validBiomes.contains(biome) && weatherContext.getCurrentEvent().isValidBiome(biome)) {
                 float weatherHumidityModifier = (float) this.weatherContext.getCurrentEvent().getHumidityModifierAtPosition(null);
@@ -141,27 +79,12 @@ public abstract class MixinServerWorld implements BiomeUpdate, BetterWeatherWorl
         }
     }
 
-    @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/DimensionType;hasSkyLight()Z"))
+    @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerLevel;updateSkyBrightness()V"))
     private void tick(BooleanSupplier hasTimeLeft, CallbackInfo ci) {
-        if (seasonContext != null) {
-            this.seasonContext.tick((ServerWorld) (Object) this);
-        }
         if (weatherContext != null) {
-            this.weatherContext.tick((ServerWorld) (Object) this);
+            this.weatherContext.tick((ServerLevel) (Object) this);
         }
     }
-
-    @Inject(method = "registryAccess", at = @At("HEAD"), cancellable = true)
-    private void dynamicRegistryWrapper(CallbackInfoReturnable<DynamicRegistries> cir) {
-        cir.setReturnValue(this.registry);
-    }
-
-    @ModifyConstant(method = "tick", constant = {@Constant(intValue = 168000), @Constant(intValue = 12000, ordinal = 1), @Constant(intValue = 12000, ordinal = 4)})
-    private int modifyWeatherTime(int arg0) {
-        SeasonContext seasonContext = this.seasonContext;
-        return seasonContext != null ? (int) (arg0 * (1 / seasonContext.getCurrentSeason().getCurrentSettings().getWeatherEventChanceMultiplier())) : arg0;
-    }
-
 
     @Inject(method = "setWeatherParameters", at = @At("HEAD"))
     private void setWeatherForced(int clearWeatherTime, int weatherTime, boolean rain, boolean thunder, CallbackInfo ci) {
@@ -171,14 +94,14 @@ public abstract class MixinServerWorld implements BiomeUpdate, BetterWeatherWorl
     }
 
     @Inject(method = "tickChunk", at = @At("HEAD"))
-    private void tickLiveChunks(Chunk chunkIn, int randomTickSpeed, CallbackInfo ci) {
+    private void tickLiveChunks(LevelChunk chunkIn, int p_8716_, CallbackInfo ci) {
         if (weatherContext != null) {
-            weatherContext.getCurrentEvent().doChunkTick(chunkIn, (ServerWorld) (Object) this);
-            doLightning((ServerWorld) (Object) this, chunkIn.getPos());
+            weatherContext.getCurrentEvent().doChunkTick(chunkIn, (ServerLevel) (Object) this);
+            doLightning((ServerLevel) (Object) this, chunkIn.getPos());
         }
     }
 
-    private void doLightning(ServerWorld world, ChunkPos chunkpos) {
+    private void doLightning(ServerLevel world, ChunkPos chunkpos) {
         if (weatherContext == null) {
             return;
         }
@@ -187,21 +110,21 @@ public abstract class MixinServerWorld implements BiomeUpdate, BetterWeatherWorl
         int zStart = chunkpos.getMinBlockZ();
         WeatherEvent currentEvent = weatherContext.getCurrentEvent();
         if (currentEvent.isThundering() && world.random.nextInt(currentEvent.getLightningChance()) == 0) {
-            BlockPos blockpos = ((ServerWorldAccess) world).invokeFindLightingTargetAround(world.getBlockRandomPos(xStart, 0, zStart, 15));
-            Biome biome = world.getBiome(blockpos);
-            if (currentEvent.isValidBiome(biome)) {
+            BlockPos blockpos = BlockPos.of(world.getLightEmission(world.getBlockRandomPos(xStart, 0, zStart, 15)));
+            Holder<Biome> biome = world.getBiome(blockpos);
+            if (currentEvent.isValidBiome(biome.value())) {
                 DifficultyInstance difficultyinstance = world.getCurrentDifficultyAt(blockpos);
                 boolean flag1 = world.getGameRules().getBoolean(GameRules.RULE_DOMOBSPAWNING) && world.random.nextDouble() < (double) difficultyinstance.getEffectiveDifficulty() * 0.01D;
                 if (flag1) {
-                    SkeletonHorseEntity skeletonhorseentity = EntityType.SKELETON_HORSE.create(world);
+                    SkeletonHorse skeletonhorseentity = EntityType.SKELETON_HORSE.create(world);
                     skeletonhorseentity.setTrap(true);
                     skeletonhorseentity.setAge(0);
                     skeletonhorseentity.setPos((double) blockpos.getX(), (double) blockpos.getY(), (double) blockpos.getZ());
                     world.addFreshEntity(skeletonhorseentity);
                 }
 
-                LightningBoltEntity lightningboltentity = EntityType.LIGHTNING_BOLT.create(world);
-                lightningboltentity.moveTo(Vector3d.atBottomCenterOf(blockpos));
+                LightningBolt lightningboltentity = EntityType.LIGHTNING_BOLT.create(world);
+                lightningboltentity.moveTo(blockpos.getX(), blockpos.getY(), blockpos.getZ());
                 lightningboltentity.setVisualOnly(flag1);
                 world.addFreshEntity(lightningboltentity);
             }
@@ -209,27 +132,9 @@ public abstract class MixinServerWorld implements BiomeUpdate, BetterWeatherWorl
     }
 
 
-    @Redirect(method = "tickChunk", at = @At(value = "INVOKE", target = "Ljava/util/Random;nextInt(I)I", ordinal = 0))
-    private int neverSpawnLightning(Random random, int bound) {
-        return weatherContext != null ? -1 : random.nextInt(bound);
-    }
-
-    @Redirect(method = "tickChunk", at = @At(value = "INVOKE", target = "Ljava/util/Random;nextInt(I)I", ordinal = 1))
-    private int takeAdvantageOfExistingChunkIterator(Random random, int bound, Chunk chunk, int randomTickSpeed) {
-        return weatherContext != null ? -1 : ((ServerWorld) (Object) this).random.nextInt(bound);
-    }
-
-    @Nullable
-    @Override
-    public SeasonContext getSeasonContext() {
-        return this.seasonContext;
-    }
-
-    @Nullable
-    @Override
-    public SeasonContext setSeasonContext(SeasonContext seasonContext) {
-        this.seasonContext = seasonContext;
-        return this.seasonContext;
+    @Redirect(method = "tickChunk", at = @At(value = "FIELD", target = "Lnet/minecraft/server/level/ServerLevel;random:Lnet/minecraft/util/RandomSource;", ordinal = 0))
+    private RandomSource neverSpawnLightning(ServerLevel instance) {
+        return instance.getRandom();
     }
 
     @Nullable
@@ -243,11 +148,5 @@ public abstract class MixinServerWorld implements BiomeUpdate, BetterWeatherWorl
     public BWWeatherEventContext setWeatherEventContext(BWWeatherEventContext weatherEventContext) {
         this.weatherContext = weatherEventContext;
         return this.weatherContext;
-    }
-
-    @Nullable
-    @Override
-    public Season getSeason() {
-        return this.seasonContext;
     }
 }

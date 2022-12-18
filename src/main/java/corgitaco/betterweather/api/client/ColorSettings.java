@@ -2,7 +2,7 @@ package corgitaco.betterweather.api.client;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.util.Util;
+import net.minecraft.Util;
 
 import java.util.HashMap;
 import java.util.Map;

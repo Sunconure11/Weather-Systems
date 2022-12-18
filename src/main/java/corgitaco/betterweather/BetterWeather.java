@@ -3,12 +3,11 @@ package corgitaco.betterweather;
 import corgitaco.betterweather.api.BetterWeatherRegistry;
 import corgitaco.betterweather.config.BetterWeatherClientConfig;
 import corgitaco.betterweather.data.network.NetworkHandler;
-import corgitaco.betterweather.server.BetterWeatherGameRules;
 import corgitaco.betterweather.weather.event.*;
 import corgitaco.betterweather.weather.event.client.settings.*;
-import net.minecraft.util.LazyValue;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.registry.Registry;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.LazyLoadedValue;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
@@ -30,7 +29,7 @@ public class BetterWeather {
 
     public static final BetterWeatherClientConfig CLIENT_CONFIG = new BetterWeatherClientConfig();
 
-    public static final boolean USING_OPTIFINE = new LazyValue<>(() -> {
+    public static final boolean USING_OPTIFINE = new LazyLoadedValue<>(() -> {
         try {
             return Class.forName("net.optifine.Config") != null;
         } catch (final Exception e) {
@@ -49,8 +48,7 @@ public class BetterWeather {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(BetterWeatherGameRules::init);
-        NetworkHandler.init();
+        NetworkHandler.registryNetworkPackets(event);
 
         Registry.register(BetterWeatherRegistry.CLIENT_WEATHER_EVENT_SETTINGS, new ResourceLocation(MOD_ID, "acid_rain"), AcidRainClientSettings.CODEC);
         Registry.register(BetterWeatherRegistry.CLIENT_WEATHER_EVENT_SETTINGS, new ResourceLocation(MOD_ID, "blizzard"), BlizzardClientSettings.CODEC);

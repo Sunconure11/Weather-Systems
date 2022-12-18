@@ -4,33 +4,35 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import corgitaco.betterweather.BetterWeather;
-import corgitaco.betterweather.api.season.Season;
 import corgitaco.betterweather.api.weather.WeatherEvent;
 import corgitaco.betterweather.api.weather.WeatherEventClientSettings;
 import corgitaco.betterweather.util.BetterWeatherUtil;
 import corgitaco.betterweather.util.TomlCommentedConfigOps;
 import corgitaco.betterweather.weather.event.client.settings.RainClientSettings;
 import it.unimi.dsi.fastutil.objects.Object2FloatArrayMap;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.material.Material;
-import net.minecraft.entity.EntityClassification;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.IStringSerializable;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.Util;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.world.World;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.gen.Heightmap;
-import net.minecraft.world.server.ServerWorld;
+import net.minecraft.Util;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.material.Material;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.Map;
 
 public class AcidRain extends Rain {
 
@@ -57,8 +59,6 @@ public class AcidRain extends Rain {
             return rain.isThundering();
         }), Codec.INT.fieldOf("lightningChance").forGetter(rain -> {
             return rain.getLightningChance();
-        }), Codec.simpleMap(Season.Key.CODEC, Codec.unboundedMap(Season.Phase.CODEC, Codec.DOUBLE), IStringSerializable.keys(Season.Key.values())).fieldOf("seasonChances").forGetter(rain -> {
-            return rain.getSeasonChances();
         })).apply(builder, AcidRain::new);
     });
 
@@ -91,59 +91,9 @@ public class AcidRain extends Rain {
         map.put("minecraft:player", 0.5F);
     });
 
-    public static final AcidRain DEFAULT = new AcidRain(new RainClientSettings(RAIN_COLORS, 0.0F, -1.0F, true, ACID_RAIN_LOCATION, SNOW_LOCATION), DEFAULT_BIOME_CONDITION, 0.25D, !MODIFY_TEMPERATURE ? 0.0 : -0.1, 0.1, 150, 100, AcidRain.DEFAULT_DECAYER, AcidRain.DEFAULT_ENTITY_DAMAGE, false, 0,
-            Util.make(new EnumMap<>(Season.Key.class), (seasons) -> {
-                seasons.put(Season.Key.SPRING, Util.make(new EnumMap<>(Season.Phase.class), (phases) -> {
-                    phases.put(Season.Phase.START, 0.23);
-                    phases.put(Season.Phase.MID, 0.26);
-                    phases.put(Season.Phase.END, 0.16);
-                }));
+    public static final AcidRain DEFAULT = new AcidRain(new RainClientSettings(RAIN_COLORS, 0.0F, -1.0F, true, ACID_RAIN_LOCATION, SNOW_LOCATION), DEFAULT_BIOME_CONDITION, 0.25D, !MODIFY_TEMPERATURE ? 0.0 : -0.1, 0.1, 150, 100, AcidRain.DEFAULT_DECAYER, AcidRain.DEFAULT_ENTITY_DAMAGE, false, 0);
 
-                seasons.put(Season.Key.SUMMER, Util.make(new EnumMap<>(Season.Phase.class), (phases) -> {
-                    phases.put(Season.Phase.START, 0.03);
-                    phases.put(Season.Phase.MID, 0.0);
-                    phases.put(Season.Phase.END, 0.0);
-                }));
-
-                seasons.put(Season.Key.AUTUMN, Util.make(new EnumMap<>(Season.Phase.class), (phases) -> {
-                    phases.put(Season.Phase.START, 0.03);
-                    phases.put(Season.Phase.MID, 0.03);
-                    phases.put(Season.Phase.END, 0.03);
-                }));
-
-                seasons.put(Season.Key.WINTER, Util.make(new EnumMap<>(Season.Phase.class), (phases) -> {
-                    phases.put(Season.Phase.START, 0.03);
-                    phases.put(Season.Phase.MID, 0.03);
-                    phases.put(Season.Phase.END, 0.06);
-                }));
-            }));
-
-    public static final AcidRain DEFAULT_THUNDERING = new AcidRain(new RainClientSettings(THUNDER_COLORS, 0.0F, -1.0F, true, ACID_RAIN_LOCATION, SNOW_LOCATION), DEFAULT_BIOME_CONDITION, 0.125D, !MODIFY_TEMPERATURE ? 0.0 : -0.1, 0.1, 150, 100, DEFAULT_DECAYER, DEFAULT_ENTITY_DAMAGE, true, 100000,
-            Util.make(new EnumMap<>(Season.Key.class), (seasons) -> {
-                seasons.put(Season.Key.SPRING, Util.make(new EnumMap<>(Season.Phase.class), (phases) -> {
-                    phases.put(Season.Phase.START, 0.115);
-                    phases.put(Season.Phase.MID, 0.13);
-                    phases.put(Season.Phase.END, 0.08);
-                }));
-
-                seasons.put(Season.Key.SUMMER, Util.make(new EnumMap<>(Season.Phase.class), (phases) -> {
-                    phases.put(Season.Phase.START, 0.0115);
-                    phases.put(Season.Phase.MID, 0.0);
-                    phases.put(Season.Phase.END, 0.0);
-                }));
-
-                seasons.put(Season.Key.AUTUMN, Util.make(new EnumMap<>(Season.Phase.class), (phases) -> {
-                    phases.put(Season.Phase.START, 0.0115);
-                    phases.put(Season.Phase.MID, 0.0115);
-                    phases.put(Season.Phase.END, 0.0115);
-                }));
-
-                seasons.put(Season.Key.WINTER, Util.make(new EnumMap<>(Season.Phase.class), (phases) -> {
-                    phases.put(Season.Phase.START, 0.0115);
-                    phases.put(Season.Phase.MID, 0.0115);
-                    phases.put(Season.Phase.END, 0.03);
-                }));
-            }));
+    public static final AcidRain DEFAULT_THUNDERING = new AcidRain(new RainClientSettings(THUNDER_COLORS, 0.0F, -1.0F, true, ACID_RAIN_LOCATION, SNOW_LOCATION), DEFAULT_BIOME_CONDITION, 0.125D, !MODIFY_TEMPERATURE ? 0.0 : -0.1, 0.1, 150, 100, DEFAULT_DECAYER, DEFAULT_ENTITY_DAMAGE, true, 100000);
 
     private final int chunkTickChance;
     private final int entityDamageChance;
@@ -152,8 +102,8 @@ public class AcidRain extends Rain {
     private final Object2FloatArrayMap<EntityType<?>> entityDamage = new Object2FloatArrayMap<>();
 
 
-    public AcidRain(WeatherEventClientSettings clientSettings, String biomeCondition, double defaultChance, double temperatureOffsetRaw, double humidityOffsetRaw, int chunkTickChance, int entityDamageChance, Map<ResourceLocation, ResourceLocation> blockToBlock, Map<String, Float> entityDamage, boolean isThundering, int lightningChance, Map<Season.Key, Map<Season.Phase, Double>> seasonChance) {
-        super(clientSettings, biomeCondition, defaultChance, temperatureOffsetRaw, humidityOffsetRaw, isThundering, lightningChance, seasonChance);
+    public AcidRain(WeatherEventClientSettings clientSettings, String biomeCondition, double defaultChance, double temperatureOffsetRaw, double humidityOffsetRaw, int chunkTickChance, int entityDamageChance, Map<ResourceLocation, ResourceLocation> blockToBlock, Map<String, Float> entityDamage, boolean isThundering, int lightningChance) {
+        super(clientSettings, biomeCondition, defaultChance, temperatureOffsetRaw, humidityOffsetRaw, isThundering, lightningChance);
         this.chunkTickChance = chunkTickChance;
         this.entityDamageChance = entityDamageChance;
         this.blockToBlock = BetterWeatherUtil.transformBlockBlockResourceLocations(blockToBlock);
@@ -165,13 +115,13 @@ public class AcidRain extends Rain {
             if (key.startsWith("category/")) {
                 String mobCategory = key.substring("category/".length()).toUpperCase();
 
-                EntityClassification[] values = EntityClassification.values();
+                MobCategory[] values = MobCategory.values();
                 if (Arrays.stream(values).noneMatch(difficulty -> difficulty.toString().equals(mobCategory))) {
                     BetterWeather.LOGGER.error("\"" + mobCategory + "\" is not a valid mob category value. Skipping mob category entry...\nValid Mob Categories: " + Arrays.toString(values));
                     continue;
                 }
 
-                for (EntityType<?> entityType : Blizzard.CLASSIFICATION_ENTITY_TYPES.get(EntityClassification.valueOf(mobCategory))) {
+                for (EntityType<?> entityType : Blizzard.CLASSIFICATION_ENTITY_TYPES.get(MobCategory.valueOf(mobCategory))) {
                     this.entityDamage.put(entityType, value);
                 }
                 continue;
@@ -187,7 +137,7 @@ public class AcidRain extends Rain {
     }
 
     @Override
-    public void chunkTick(Chunk chunk, ServerWorld world) {
+    public void chunkTick(LevelChunk chunk, ServerLevel world) {
         super.chunkTick(chunk, world);
         if (this.chunkTickChance < 1) {
             return;
@@ -196,11 +146,11 @@ public class AcidRain extends Rain {
             ChunkPos chunkpos = chunk.getPos();
             int xStart = chunkpos.getMinBlockX();
             int zStart = chunkpos.getMinBlockZ();
-            BlockPos randomPos = world.getHeightmapPos(Heightmap.Type.MOTION_BLOCKING, world.getBlockRandomPos(xStart, 0, zStart, 15));
+            BlockPos randomPos = world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, world.getBlockRandomPos(xStart, 0, zStart, 15));
             BlockPos randomPosDown = randomPos.below();
-            Biome biome = world.getBiome(randomPos);
+            Holder<Biome> biome = world.getBiome(randomPos);
 
-            if (isValidBiome(biome) && !biome.shouldSnow(world, randomPos)) {
+            if (isValidBiome(biome.value()) && !biome.value().shouldSnow(world, randomPos)) {
                 Block currentBlock = world.getBlockState(randomPos).getBlock();
                 Block currentBlockDown = world.getBlockState(randomPosDown).getBlock();
 
@@ -214,17 +164,16 @@ public class AcidRain extends Rain {
         }
     }
 
-
     @Override
-    public void livingEntityUpdate(LivingEntity entity) {
+    public void livingEntityUpdate(Entity entity) {
         if (this.chunkTickChance < 1) {
             return;
         }
-        World world = entity.level;
+        Level world = entity.level;
         if (world.random.nextInt(entityDamageChance) == 0) {
             BlockPos entityPosition = entity.blockPosition();
-            Biome biome = world.getBiome(entityPosition);
-            if (world.getHeight(Heightmap.Type.MOTION_BLOCKING, entityPosition.getX(), entityPosition.getZ()) > entityPosition.getY() || !isValidBiome(biome) || biome.shouldSnow(world, entityPosition)) {
+            Holder<Biome> biome = world.getBiome(entityPosition);
+            if (world.getHeight(Heightmap.Types.MOTION_BLOCKING, entityPosition.getX(), entityPosition.getZ()) > entityPosition.getY() || !isValidBiome(biome.value()) || biome.value().shouldSnow(world, entityPosition)) {
                 return;
             }
 

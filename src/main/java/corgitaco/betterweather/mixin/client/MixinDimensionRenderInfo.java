@@ -3,13 +3,13 @@ package corgitaco.betterweather.mixin.client;
 import corgitaco.betterweather.helpers.BetterWeatherWorldData;
 import corgitaco.betterweather.weather.BWWeatherEventContext;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.world.DimensionRenderInfo;
+import net.minecraft.client.renderer.DimensionSpecialEffects;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(DimensionRenderInfo.class)
+@Mixin(DimensionSpecialEffects.class)
 public abstract class MixinDimensionRenderInfo {
     Minecraft minecraft = Minecraft.getInstance();
 
