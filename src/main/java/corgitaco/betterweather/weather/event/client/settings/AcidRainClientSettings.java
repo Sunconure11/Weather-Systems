@@ -36,7 +36,7 @@ public class AcidRainClientSettings extends RainClientSettings {
         map.put("smokeParticles", "Do smoke particles appear on the ground?");
     });
 
-    public final boolean addSmokeParticles;
+    public boolean addSmokeParticles = true;
 
     public AcidRainClientSettings(ColorSettings colorSettings, float skyOpacity, float fogDensity, boolean sunsetSunriseColor, ResourceLocation rainTexture, ResourceLocation snowTexture, boolean addSmokeParticles) {
         super(colorSettings, skyOpacity, fogDensity, sunsetSunriseColor, rainTexture, snowTexture);

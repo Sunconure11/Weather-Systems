@@ -6,9 +6,11 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.math.Matrix4f;
+import com.mojang.math.Vector3f;
 import corgitaco.betterweather.BetterWeather;
 import corgitaco.betterweather.api.client.WeatherEventClient;
 import corgitaco.betterweather.api.client.graphics.Graphics;
+import corgitaco.betterweather.api.client.graphics.opengl.program.ShaderProgram;
 import corgitaco.betterweather.api.client.graphics.opengl.program.ShaderProgramBuilder;
 import corgitaco.betterweather.api.weather.WeatherEventAudio;
 import corgitaco.betterweather.weather.event.client.settings.BlizzardClientSettings;
@@ -67,8 +69,8 @@ public class BlizzardClient extends WeatherEventClient<BlizzardClientSettings> i
 
             try {
                 builder1
-                        .compile(GL_FRAGMENT_SHADER, manager.getResource(new ResourceLocation("betterweather", "shaders/fragment.glsl")).orElseThrow())
-                        .compile(GL_VERTEX_SHADER, manager.getResource(new ResourceLocation("betterweather", "shaders/vertex.glsl")).orElseThrow());
+                        .compile(GL_FRAGMENT_SHADER, manager.getResource(new ResourceLocation(BetterWeather.MOD_ID, "shaders/fragment.glsl")).orElseThrow())
+                        .compile(GL_VERTEX_SHADER, manager.getResource(new ResourceLocation(BetterWeather.MOD_ID, "shaders/vertex.glsl")).orElseThrow());
             } catch (IOException e) {
                 BetterWeather.LOGGER.error(e);
 
@@ -78,12 +80,50 @@ public class BlizzardClient extends WeatherEventClient<BlizzardClientSettings> i
     }
 
     @Override
-    public boolean renderWeatherShaders(Graphics graphics, ClientLevel world, double x, double y, double z) {
-        return true;
+    public void renderWeatherShaders(Graphics graphics, ClientLevel world, double x, double y, double z) {
+        ShaderProgram program = buildOrGetProgram(builder);
+
+        int floorX = Mth.floor(x);
+        int floorY = Mth.floor(y);
+        int floorZ = Mth.floor(z);
+
+        int radius = 5;
+
+        program.bind();
+
+        modelMatrix.setIdentity();
+        modelMatrix.translate(new Vector3f((float) x, (float) y, (float) z));
+
+        program.uploadMatrix4f("pos", modelMatrix);
+
+        /**
+         * Imagine a horizontal plane.
+         *
+         * iterating from:
+         * (floor - radius) 🡢 (floor + radius) X
+         * 🡣
+         * (floor + radius)
+         * Z
+         *
+         * -x-z ─────(x)───── +x
+         * │                   ┊
+         * │                   ┊
+         * (z)                 ┊
+         * │                   ┊
+         * │                   ┊
+         * +z ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+         */
+        for (int planeX = floorX - radius; planeX < floorX + radius; planeX++) for (int planeZ = floorZ - radius; planeZ < floorZ + radius; planeZ++) {
+
+            int height = world.getHeight(Heightmap.Types.MOTION_BLOCKING, planeX, planeZ);
+
+        }
+
+        program.unbind();
+
     }
 
-    @Override
-    public boolean renderWeatherLegacy(Minecraft mc, ClientLevel world, LightTexture lightTexture, int ticks, float partialTicks, double x, double y,  double z, Predicate<Biome> biomePredicate) {
+    public boolean renderWeatherLegacyBlizzard(Minecraft mc, ClientLevel world, LightTexture lightTexture, int ticks, float partialTicks, double x, double y,  double z, Predicate<Biome> biomePredicate) {
         float rainStrength = world.getRainLevel(partialTicks);
         lightTexture.turnOnLightLayer();
         int floorX = Mth.floor(x);

@@ -46,7 +46,7 @@ public final class ColorUtil {
         BWWeatherEventContext weatherEventContext = ((BetterWeatherWorldData) world).getWeatherEventContext();
 
         Optional<ResourceKey<Biome>> optionalKey = world.registryAccess().registryOrThrow(Registry.BIOME_REGISTRY).getResourceKey(biome);
-        if (!optionalKey.isPresent()) {
+        if (optionalKey.isEmpty()) {
             return previous;
         }
 

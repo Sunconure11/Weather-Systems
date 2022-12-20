@@ -8,6 +8,7 @@ import corgitaco.betterweather.helpers.BetterWeatherWorldData;
 import corgitaco.betterweather.weather.BWWeatherEventContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
 import net.minecraft.client.resources.sounds.AmbientSoundHandler;
 import net.minecraft.client.sounds.SoundManager;
@@ -39,7 +40,7 @@ public class WeatherSoundHandler implements AmbientSoundHandler {
     private final ClientLevel world;
     private WeatherSoundHandler.Sound currentSound;
 
-    public WeatherSoundHandler(Player player, SoundManager soundHandler, BiomeManager biomeManager) {
+    public WeatherSoundHandler(AbstractClientPlayer player, SoundManager soundHandler, BiomeManager biomeManager) {
         this.player = player;
         this.soundHandler = soundHandler;
         this.biomeManager = biomeManager;

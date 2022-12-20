@@ -31,18 +31,18 @@ public class SetWeatherCommand {
                         .suggests((ctx, sb) -> {
                             BWWeatherEventContext weatherEventContext = ((BetterWeatherWorldData) ctx.getSource().getLevel()).getWeatherEventContext();
                             return SharedSuggestionProvider.suggest(weatherEventContext != null ? weatherEventContext.getWeatherEvents().keySet().stream() : Arrays.stream(new String[]{WEATHER_NOT_ENABLED}), sb);
-                        }).executes(cs -> betterWeatherSetSeason(cs.getSource(), cs.getArgument("weather", String.class),
+                        }).executes(cs -> betterWeatherSetWeather(cs.getSource(), cs.getArgument("weather", String.class),
                                 12000)) // Default length to 10 minutes.
                         .then(
                                 Commands.argument("length", IntegerArgumentType.integer())
                                         .suggests((ctx, sb) -> SharedSuggestionProvider.suggest(LENGTH_SUGGESTIONS.stream(), sb))
-                                        .executes((cs) -> betterWeatherSetSeason(cs.getSource(), cs.getArgument("weather", String.class),
+                                        .executes((cs) -> betterWeatherSetWeather(cs.getSource(), cs.getArgument("weather", String.class),
                                                 cs.getArgument("length", int.class)))
                         )
         );
     }
 
-    public static int betterWeatherSetSeason(CommandSourceStack source, String weatherKey, int length) {
+    public static int betterWeatherSetWeather(CommandSourceStack source, String weatherKey, int length) {
         if (weatherKey.equals(WEATHER_NOT_ENABLED)) {
             source.sendFailure(Component.translatable("commands.bw.setweather.no.weather.for.world"));
             return 0;

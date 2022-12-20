@@ -2,12 +2,14 @@ package corgitaco.betterweather;
 
 import corgitaco.betterweather.api.BetterWeatherRegistry;
 import corgitaco.betterweather.config.BetterWeatherClientConfig;
+import corgitaco.betterweather.config.BetterWeatherConfig;
 import corgitaco.betterweather.data.network.NetworkHandler;
 import corgitaco.betterweather.weather.event.*;
 import corgitaco.betterweather.weather.event.client.settings.*;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.LazyLoadedValue;
+import net.minecraftforge.eventbus.EventBus;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
@@ -48,8 +50,7 @@ public class BetterWeather {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-        NetworkHandler.registryNetworkPackets(event);
-
+        BetterWeatherConfig.serialize();
         Registry.register(BetterWeatherRegistry.CLIENT_WEATHER_EVENT_SETTINGS, new ResourceLocation(MOD_ID, "acid_rain"), AcidRainClientSettings.CODEC);
         Registry.register(BetterWeatherRegistry.CLIENT_WEATHER_EVENT_SETTINGS, new ResourceLocation(MOD_ID, "blizzard"), BlizzardClientSettings.CODEC);
         Registry.register(BetterWeatherRegistry.CLIENT_WEATHER_EVENT_SETTINGS, new ResourceLocation(MOD_ID, "cloudy"), CloudyClientSettings.CODEC);
@@ -72,7 +73,6 @@ public class BetterWeather {
         BetterWeatherRegistry.DEFAULT_EVENTS.put(new ResourceLocation(BetterWeather.MOD_ID, "blizzard_thundering"), Blizzard.DEFAULT_THUNDERING);
         BetterWeatherRegistry.DEFAULT_EVENTS.put(new ResourceLocation(BetterWeather.MOD_ID, "cloudy_thundering"), Cloudy.DEFAULT_THUNDERING);
         BetterWeatherRegistry.DEFAULT_EVENTS.put(new ResourceLocation(BetterWeather.MOD_ID, "thundering"), Rain.DEFAULT_THUNDERING);
-
     }
 
     private void clientSetup(FMLClientSetupEvent event) {

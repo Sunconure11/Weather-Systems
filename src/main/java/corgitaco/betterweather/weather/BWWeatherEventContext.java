@@ -22,7 +22,8 @@ import corgitaco.betterweather.data.network.NetworkHandler;
 import corgitaco.betterweather.data.network.packet.util.RefreshRenderersPacket;
 import corgitaco.betterweather.data.network.packet.weather.WeatherDataPacket;
 import corgitaco.betterweather.data.storage.WeatherEventSavedData;
-import corgitaco.betterweather.helpers.BiomeUpdate;
+import corgitaco.betterweather.helpers.ClientBiomeUpdate;
+import corgitaco.betterweather.helpers.ServerBiomeUpdate;
 import corgitaco.betterweather.util.TomlCommentedConfigOps;
 import corgitaco.betterweather.weather.event.None;
 import net.minecraft.Util;
@@ -31,6 +32,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
@@ -45,7 +47,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
-@SuppressWarnings("ConstantConditions")
 public class BWWeatherEventContext implements WeatherEventContext {
 
     public static final String CONFIG_NAME = "weather-settings.toml";
@@ -68,7 +69,7 @@ public class BWWeatherEventContext implements WeatherEventContext {
     }), true);
 
 
-    private final Map<String, WeatherEvent> weatherEvents = new HashMap<>();
+    private static final Map<String, WeatherEvent> weatherEvents = new HashMap<>();
     private final ResourceLocation worldID;
     private final Registry<Biome> biomeRegistry;
     private final Path weatherConfigPath;
@@ -76,7 +77,7 @@ public class BWWeatherEventContext implements WeatherEventContext {
     private final File weatherConfigFile;
 
     private boolean refreshRenderers;
-    private WeatherEvent currentEvent;
+    public static WeatherEvent currentEvent;
     private boolean weatherForced;
 
     //Packet Constructor
@@ -95,15 +96,15 @@ public class BWWeatherEventContext implements WeatherEventContext {
         this.weatherConfigPath = BetterWeather.CONFIG_PATH.resolve(worldID.getNamespace()).resolve(worldID.getPath()).resolve("weather");
         this.weatherEventsConfigPath = this.weatherConfigPath.resolve("events");
         this.weatherConfigFile = this.weatherConfigPath.resolve(CONFIG_NAME).toFile();
-        this.weatherEvents.put(DEFAULT, None.DEFAULT.setName(DEFAULT));
+        BWWeatherEventContext.weatherEvents.put(DEFAULT, None.DEFAULT.setName(DEFAULT));
         this.weatherForced = weatherForced;
         boolean isClient = weatherEvents != null;
         boolean isPacket = biomeRegistry == null;
 
         if (isClient) {
-            this.weatherEvents.putAll(weatherEvents);
+            BWWeatherEventContext.weatherEvents.putAll(weatherEvents);
 
-            this.weatherEvents.forEach((key, weatherEvent) -> {
+            BWWeatherEventContext.weatherEvents.forEach((key, weatherEvent) -> {
                 weatherEvent.setClient(weatherEvent.getClientSettings().createClientSettings());
             });
         }
@@ -111,9 +112,8 @@ public class BWWeatherEventContext implements WeatherEventContext {
             this.handleConfig(isClient);
         }
 
-
-        WeatherEvent currentWeatherEvent = this.weatherEvents.get(currentEvent);
-        this.currentEvent = this.weatherEvents.getOrDefault(currentEvent, None.DEFAULT);
+        WeatherEvent currentWeatherEvent = BWWeatherEventContext.weatherEvents.get(currentEvent);
+        BWWeatherEventContext.currentEvent = BWWeatherEventContext.weatherEvents.getOrDefault(currentEvent, None.DEFAULT);
         if (currentEvent != null && currentWeatherEvent == null) {
             BetterWeather.LOGGER.error("The last weather event for the world: \"" + worldID.toString() + "\" was not found in: \"" + this.weatherEventsConfigPath.toString() + "\".\nDefaulting to weather event: \"" + DEFAULT + "\".");
         } else {
@@ -122,7 +122,7 @@ public class BWWeatherEventContext implements WeatherEventContext {
             }
         }
         if (!isPacket) {
-            for (Map.Entry<String, WeatherEvent> stringWeatherEventEntry : this.weatherEvents.entrySet()) {
+            for (Map.Entry<String, WeatherEvent> stringWeatherEventEntry : BWWeatherEventContext.weatherEvents.entrySet()) {
                 stringWeatherEventEntry.getValue().fillBiomes(biomeRegistry);
             }
         }
@@ -131,33 +131,38 @@ public class BWWeatherEventContext implements WeatherEventContext {
 
     public void tick(Level world) {
         //TODO: Remove this check and figure out what could possibly be causing this and prevent it.
-        if (this.weatherEvents.get(DEFAULT) == this.currentEvent && world.isRaining()) {
+        if (weatherEvents.get(DEFAULT) == this.getCurrentEvent() && world.isRaining()) {
             world.getLevelData().setRaining(false);
         }
 
-        WeatherEvent prevEvent = this.currentEvent;
+        WeatherEvent prevEvent = this.getCurrentEvent();
         boolean wasForced = this.weatherForced;
         if (world instanceof ServerLevel level) {
             shuffleAndPickWeatherEvent(level);
         }
 
-        if (prevEvent != this.currentEvent || wasForced != this.weatherForced) {
+        if (prevEvent != this.getCurrentEvent() || wasForced != this.weatherForced) {
             onWeatherChange(world);
         }
         if (world instanceof ServerLevel level) {
-            this.currentEvent.worldTick(level, world.getGameRules().getInt(GameRules.RULE_RANDOMTICKING), world.getGameTime());
+            this.getCurrentEvent().worldTick(level, world.getGameRules().getInt(GameRules.RULE_RANDOMTICKING), world.getGameTime());
         }
         if (world.isClientSide) {
-            this.getCurrentClientEvent().clientTick((ClientLevel) world, world.getGameRules().getInt(GameRules.RULE_RANDOMTICKING), world.getGameTime(), Minecraft.getInstance(), currentEvent::isValidBiome);
+            this.getCurrentClientEvent().clientTick((ClientLevel) world, world.getGameRules().getInt(GameRules.RULE_RANDOMTICKING), world.getGameTime(), Minecraft.getInstance(), getCurrentEvent()::isValidBiome);
         }
     }
 
     private void onWeatherChange(Level world) {
-        ((BiomeUpdate) world).updateBiomeData();
-        save(world);
-        if (world instanceof ServerLevel) {
-            ((ServerLevelData) world.getLevelData()).setThundering(this.currentEvent.isThundering());
-            sendPackets((ServerLevel) world);
+        if (world.getChunkSource() instanceof ServerChunkCache serverChunkCache) {
+            new ServerBiomeUpdate(serverChunkCache, world.registryAccess(), this).updateBiomeData();
+            save(world);
+            if (world instanceof ServerLevel serverLevel) {
+                ((ServerLevelData) world.getLevelData()).setThundering(currentEvent.isThundering());
+                sendPackets(serverLevel);
+            }
+        } else {
+            new ClientBiomeUpdate(world.registryAccess(), this).updateBiomeData();
+            save(world);
         }
     }
 
@@ -175,17 +180,17 @@ public class BWWeatherEventContext implements WeatherEventContext {
             if (rainingStrength <= 0.02F) {
                 if (!this.weatherForced) {
                     Random random = new Random(((ServerLevel) world).getSeed() + world.getGameTime());
-                    ArrayList<String> list = new ArrayList<>(this.weatherEvents.keySet());
+                    ArrayList<String> list = new ArrayList<>(weatherEvents.keySet());
                     Collections.shuffle(list, random);
                     for (String entry : list) {
                         if (entry.equals(DEFAULT)) {
                             continue;
                         }
-                        WeatherEvent weatherEvent = this.weatherEvents.get(entry);
+                        WeatherEvent weatherEvent = weatherEvents.get(entry);
                         double chance =  weatherEvent.getDefaultChance();
 
-                        if (random.nextDouble() < chance || this.currentEvent == this.weatherEvents.get(DEFAULT)) {
-                            this.currentEvent = weatherEvent;
+                        if (random.nextDouble() < chance || currentEvent == weatherEvents.get(DEFAULT)) {
+                            currentEvent = weatherEvent;
                             break;
                         }
                     }
@@ -193,7 +198,7 @@ public class BWWeatherEventContext implements WeatherEventContext {
             }
         } else {
             if (rainingStrength == 0.0F) {
-                this.currentEvent = this.weatherEvents.get(DEFAULT);
+                currentEvent = weatherEvents.get(DEFAULT);
                 this.weatherForced = false;
             }
         }
@@ -201,12 +206,12 @@ public class BWWeatherEventContext implements WeatherEventContext {
 
     private void save(Level world) {
         WeatherEventSavedData weatherEventSavedData = WeatherEventSavedData.get(world);
-        weatherEventSavedData.setEvent(this.currentEvent.getName());
+        weatherEventSavedData.setEvent(this.getCurrentEvent().getName());
         weatherEventSavedData.setWeatherForced(this.weatherForced);
     }
 
     public WeatherEvent weatherForcer(String weatherEventName, int weatherEventLength, ServerLevel world) {
-        this.currentEvent = this.weatherEvents.get(weatherEventName);
+        currentEvent = weatherEvents.get(weatherEventName);
         this.weatherForced = true;
 
         ServerLevelData worldInfo = (ServerLevelData) world.getLevelData();
@@ -218,11 +223,11 @@ public class BWWeatherEventContext implements WeatherEventContext {
             worldInfo.setClearWeatherTime(0);
             worldInfo.setRainTime(weatherEventLength);
             worldInfo.setRaining(true);
-            worldInfo.setThundering(this.currentEvent.isThundering());
+            worldInfo.setThundering(currentEvent.isThundering());
         }
 
         onWeatherChange(world);
-        return this.currentEvent;
+        return currentEvent;
     }
 
 
@@ -263,6 +268,7 @@ public class BWWeatherEventContext implements WeatherEventContext {
 
     private void handleEventConfigs(boolean isClient) {
         File eventsDirectory = this.weatherEventsConfigPath.toFile();
+
         if (!eventsDirectory.exists()) {
             createDefaultEventConfigs();
         }
@@ -297,13 +303,13 @@ public class BWWeatherEventContext implements WeatherEventContext {
             String name = configFile.getName().replace(".json", "").toLowerCase();
             WeatherEvent decodedValue = WeatherEvent.CODEC.decode(JsonOps.INSTANCE, new JsonParser().parse(new FileReader(configFile))).resultOrPartial(BetterWeather.LOGGER::error).get().getFirst().setName(name);
             if (isClient && !BetterWeather.CLIENT_CONFIG.useServerClientSettings) {
-                if (this.weatherEvents.containsKey(name)) {
-                    WeatherEvent weatherEvent = this.weatherEvents.get(name);
+                if (weatherEvents.containsKey(name)) {
+                    WeatherEvent weatherEvent = weatherEvents.get(name);
                     weatherEvent.setClientSettings(decodedValue.getClientSettings());
                     weatherEvent.setClient(weatherEvent.getClientSettings().createClientSettings());
                 }
             } else {
-                this.weatherEvents.put(name, decodedValue);
+                weatherEvents.put(name, decodedValue);
             }
         } catch (FileNotFoundException e) {
             BetterWeather.LOGGER.error(e.toString());
@@ -319,13 +325,13 @@ public class BWWeatherEventContext implements WeatherEventContext {
         WeatherEvent decodedValue = WeatherEvent.CODEC.decode(TomlCommentedConfigOps.INSTANCE, readConfig).resultOrPartial(BetterWeather.LOGGER::error).get().getFirst().setName(name);
 
         if (isClient && !BetterWeather.CLIENT_CONFIG.useServerClientSettings) {
-            if (this.weatherEvents.containsKey(name)) {
-                WeatherEvent weatherEvent = this.weatherEvents.get(name);
+            if (weatherEvents.containsKey(name)) {
+                WeatherEvent weatherEvent = weatherEvents.get(name);
                 weatherEvent.setClientSettings(decodedValue.getClientSettings());
                 weatherEvent.setClient(weatherEvent.getClientSettings().createClientSettings());
             }
         } else {
-            this.weatherEvents.put(name, decodedValue);
+            weatherEvents.put(name, decodedValue);
         }
     }
 
@@ -376,9 +382,13 @@ public class BWWeatherEventContext implements WeatherEventContext {
         }
     }
 
+    public static Map<String, WeatherEvent> getWeatherEvent() {
+        return weatherEvents;
+    }
+
     @OnlyIn(Dist.CLIENT)
     public void addSettingsIfMissing() {
-        for (Map.Entry<String, WeatherEvent> entry : this.weatherEvents.entrySet()) {
+        for (Map.Entry<String, WeatherEvent> entry : weatherEvents.entrySet()) {
             WeatherEvent event = entry.getValue();
             String key = entry.getKey();
             File tomlFile = this.weatherEventsConfigPath.resolve(key + ".toml").toFile();
@@ -400,11 +410,11 @@ public class BWWeatherEventContext implements WeatherEventContext {
     }
 
     public void setCurrentEvent(WeatherEvent currentEvent) {
-        this.currentEvent = currentEvent;
+        BWWeatherEventContext.currentEvent = currentEvent;
     }
 
     public void setCurrentEvent(String currentEvent) {
-        this.currentEvent = this.weatherEvents.get(currentEvent);
+        BWWeatherEventContext.currentEvent = weatherEvents.get(currentEvent);
     }
 
     public void setWeatherForced(boolean weatherForced) {
@@ -412,7 +422,16 @@ public class BWWeatherEventContext implements WeatherEventContext {
     }
 
     public WeatherEvent getCurrentEvent() {
-        return currentEvent;
+        if(currentEvent != null) {
+            return currentEvent;
+        } else {
+            if(!weatherEvents.isEmpty()) {
+                return weatherEvents.values().iterator().next();
+            } else {
+                BWWeatherEventContext.weatherEvents.put(DEFAULT, None.DEFAULT.setName(DEFAULT));
+                return BWWeatherEventContext.weatherEvents.get(DEFAULT);
+            }
+        }
     }
 
     public Map<String, WeatherEvent> getWeatherEvents() {
@@ -430,12 +449,16 @@ public class BWWeatherEventContext implements WeatherEventContext {
 
     @Override
     public String getCurrentWeatherEventKey() {
-        return this.currentEvent.getName();
+        if(this.getCurrentEvent().getName() != null) {
+            return this.getCurrentEvent().getName();
+        } else {
+            return "none";
+        }
     }
 
     @Override
     public WeatherEventSettings getCurrentWeatherEventSettings() {
-        return this.currentEvent;
+        return this.getCurrentEvent();
     }
 
     public boolean isRefreshRenderers() {
@@ -444,7 +467,7 @@ public class BWWeatherEventContext implements WeatherEventContext {
 
     @OnlyIn(Dist.CLIENT)
     public WeatherEventClient<?> getCurrentClientEvent() {
-        return this.currentEvent.getClient();
+        return this.getCurrentEvent().getClient();
     }
 
     private static class WeatherEventConfig {

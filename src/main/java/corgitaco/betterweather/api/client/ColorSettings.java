@@ -52,7 +52,6 @@ public class ColorSettings {
         map.put("cloudTargetHexColor", "Blends this world's grass color towards this value. Blend strength is determined by the value of \"cloudColorBlendStrength\".");
     });
 
-
     private final int targetFoliageHexColor;
     private final double foliageColorBlendStrength;
     private final int targetGrassHexColor;
@@ -63,10 +62,6 @@ public class ColorSettings {
     private final double cloudColorBlendStrength;
     private final int targetFogHexColor;
     private final double fogColorBlendStrength;
-
-    public ColorSettings() {
-        this("", 0, "", 0);
-    }
 
     public ColorSettings(String targetFoliageHexColor, double foliageColorBlendStrength, String targetGrassColor, double grassColorBlendStrength) {
         this(targetFoliageHexColor, foliageColorBlendStrength, targetGrassColor, grassColorBlendStrength, targetGrassColor, 0, targetGrassColor, 0, targetGrassColor, 0);

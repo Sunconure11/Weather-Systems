@@ -76,8 +76,6 @@ public class Blizzard extends WeatherEvent {
             if (!blockOptional.isPresent()) {
                 BetterWeather.LOGGER.error("\"" + snowBlockID.toString() + "\" is not a valid block ID in the registry, defaulting to \"minecraft:snow\"...");
             }
-
-
             return new Blizzard(clientSettings, biomeCondition, defaultChance, temperatureOffsetRaw, humidityOffsetRaw, tickRate, blockLightThreshold, blockOptional.orElse(Blocks.SNOW), snowLayers, waterFreezes, entityOrCategoryToEffectsMap, isThundering, lightningChance);
         });
     });
@@ -93,7 +91,6 @@ public class Blizzard extends WeatherEvent {
     });
 
     public static final TomlCommentedConfigOps CONFIG_OPS = new TomlCommentedConfigOps(VALUE_COMMENTS, true);
-
 
     public static final Blizzard DEFAULT = new Blizzard(new BlizzardClientSettings(new ColorSettings(Integer.MAX_VALUE, 0.0, Integer.MAX_VALUE, 0.0), 0.0F, 0.2F, false, Rain.SNOW_LOCATION, SoundRegistry.BLIZZARD_LOOP2, 0.6F, 0.6F), Rain.DEFAULT_BIOME_CONDITION, 0.1D, !MODIFY_TEMPERATURE ? 0.0 : -0.5, 0.1, 2, 10, Blocks.SNOW, true, true, Util.make(new HashMap<>(), ((stringListHashMap) -> stringListHashMap.put(Registry.ENTITY_TYPE.getKey(EntityType.PLAYER).toString(), ImmutableList.of(Objects.requireNonNull(Registry.MOB_EFFECT.getKey(MobEffects.MOVEMENT_SLOWDOWN)).toString())))), false, 0);
 

@@ -8,6 +8,7 @@ import corgitaco.betterweather.api.weather.WeatherEvent;
 import corgitaco.betterweather.api.weather.WeatherEventClientSettings;
 import corgitaco.betterweather.util.BetterWeatherUtil;
 import corgitaco.betterweather.util.TomlCommentedConfigOps;
+import corgitaco.betterweather.weather.event.client.settings.AcidRainClientSettings;
 import corgitaco.betterweather.weather.event.client.settings.RainClientSettings;
 import it.unimi.dsi.fastutil.objects.Object2FloatArrayMap;
 import net.minecraft.Util;
@@ -91,9 +92,9 @@ public class AcidRain extends Rain {
         map.put("minecraft:player", 0.5F);
     });
 
-    public static final AcidRain DEFAULT = new AcidRain(new RainClientSettings(RAIN_COLORS, 0.0F, -1.0F, true, ACID_RAIN_LOCATION, SNOW_LOCATION), DEFAULT_BIOME_CONDITION, 0.25D, !MODIFY_TEMPERATURE ? 0.0 : -0.1, 0.1, 150, 100, AcidRain.DEFAULT_DECAYER, AcidRain.DEFAULT_ENTITY_DAMAGE, false, 0);
+    public static final AcidRain DEFAULT = new AcidRain(new AcidRainClientSettings(RAIN_COLORS, 0.0F, -1.0F, true, ACID_RAIN_LOCATION, SNOW_LOCATION, true), DEFAULT_BIOME_CONDITION, 0.25D, !MODIFY_TEMPERATURE ? 0.0 : -0.1, 0.1, 150, 100, AcidRain.DEFAULT_DECAYER, AcidRain.DEFAULT_ENTITY_DAMAGE, false, 0);
 
-    public static final AcidRain DEFAULT_THUNDERING = new AcidRain(new RainClientSettings(THUNDER_COLORS, 0.0F, -1.0F, true, ACID_RAIN_LOCATION, SNOW_LOCATION), DEFAULT_BIOME_CONDITION, 0.125D, !MODIFY_TEMPERATURE ? 0.0 : -0.1, 0.1, 150, 100, DEFAULT_DECAYER, DEFAULT_ENTITY_DAMAGE, true, 100000);
+    public static final AcidRain DEFAULT_THUNDERING = new AcidRain(new AcidRainClientSettings(THUNDER_COLORS, 0.0F, -1.0F, true, ACID_RAIN_LOCATION, SNOW_LOCATION, true), DEFAULT_BIOME_CONDITION, 0.125D, !MODIFY_TEMPERATURE ? 0.0 : -0.1, 0.1, 150, 100, DEFAULT_DECAYER, DEFAULT_ENTITY_DAMAGE, true, 100000);
 
     private final int chunkTickChance;
     private final int entityDamageChance;

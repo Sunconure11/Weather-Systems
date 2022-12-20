@@ -3,7 +3,13 @@ package corgitaco.betterweather.api.weather;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DynamicOps;
 import corgitaco.betterweather.api.BetterWeatherRegistry;
+import corgitaco.betterweather.api.client.ColorSettings;
 import corgitaco.betterweather.api.client.WeatherEventClient;
+import corgitaco.betterweather.helpers.BetterWeatherWorldData;
+import corgitaco.betterweather.util.BetterWeatherUtil;
+import corgitaco.betterweather.weather.event.None;
+import corgitaco.betterweather.weather.event.client.NoneClient;
+import corgitaco.betterweather.weather.event.client.settings.NoneClientSettings;
 import it.unimi.dsi.fastutil.objects.ReferenceArraySet;
 import net.minecraft.Util;
 import net.minecraft.core.Registry;
@@ -51,6 +57,8 @@ public abstract class WeatherEvent implements WeatherEventSettings {
     private WeatherEventClientSettings clientSettings;
     private WeatherEventClient<?> client;
     private String name;
+
+    private final NoneClientSettings noneClientSettings = new NoneClientSettings(new ColorSettings("0B8649", 3.0, "0B8649", 3.0));
 
     public WeatherEvent(WeatherEventClientSettings clientSettings, String biomeCondition, double defaultChance, double temperatureOffsetRaw, double humidityOffsetRaw, boolean isThundering, int lightningFrequency) {
         this.clientSettings = clientSettings;
@@ -102,17 +110,16 @@ public abstract class WeatherEvent implements WeatherEventSettings {
     }
 
     public final TranslatableContents successTranslationTextComponent(String key) {
-        return new TranslatableContents("commands.bw.setweather.success",
-                new TranslatableContents("bw.weather." + key));
+        return new TranslatableContents("commands.bw.setweather.success", new TranslatableContents("bw.weather." + key));
+    }
+
+    public String getName() {
+        return name;
     }
 
     public WeatherEvent setName(String name) {
         this.name = name;
         return this;
-    }
-
-    public String getName() {
-        return name;
     }
 
     public void fillBiomes(Registry<Biome> biomeRegistry) {
@@ -127,7 +134,11 @@ public abstract class WeatherEvent implements WeatherEventSettings {
     }
 
     public WeatherEventClientSettings getClientSettings() {
-        return clientSettings;
+        if(clientSettings != null) {
+            return clientSettings;
+        } else {
+            return noneClientSettings;
+        }
     }
 
     @OnlyIn(Dist.CLIENT)
@@ -162,7 +173,11 @@ public abstract class WeatherEvent implements WeatherEventSettings {
 
     @OnlyIn(Dist.CLIENT)
     public WeatherEventClient<?> getClient() {
-        return client;
+        if(client != null) {
+            return client;
+        } else {
+            return noneClientSettings.createClientSettings();
+        }
     }
 
     @OnlyIn(Dist.CLIENT)

@@ -9,11 +9,10 @@ import corgitaco.betterweather.weather.event.client.NoneClient;
 
 public class NoneClientSettings extends WeatherEventClientSettings {
     public static final Codec<NoneClientSettings> CODEC = RecordCodecBuilder.create((builder) -> {
-        return builder.group(ColorSettings.CODEC.fieldOf("colorSettings").forGetter(blizzardClient -> {
-            return blizzardClient.getColorSettings();
+        return builder.group(ColorSettings.CODEC.fieldOf("colorSettings").forGetter(noneClient -> {
+            return noneClient.getColorSettings();
         })).apply(builder, NoneClientSettings::new);
     });
-
 
     public NoneClientSettings(ColorSettings colorSettings) {
         super(colorSettings, 1.0F, -1.0F, true);

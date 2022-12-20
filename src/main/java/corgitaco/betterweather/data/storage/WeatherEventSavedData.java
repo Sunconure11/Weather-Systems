@@ -1,6 +1,7 @@
 package corgitaco.betterweather.data.storage;
 
 import corgitaco.betterweather.BetterWeather;
+import corgitaco.betterweather.api.weather.WeatherEvent;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -9,6 +10,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.storage.DimensionDataStorage;
 import org.jetbrains.annotations.NotNull;
+
+import java.io.File;
 
 public class WeatherEventSavedData extends SavedData {
     public static String DATA_NAME = new ResourceLocation(BetterWeather.MOD_ID, "weather_event_data").toString();
@@ -39,6 +42,15 @@ public class WeatherEventSavedData extends SavedData {
         }
 
         return weatherData;
+    }
+
+    @Override
+    public void save(@NotNull File dataFile) {
+        if(!dataFile.exists()) {
+            dataFile = new File(dataFile.getAbsolutePath());
+        }
+
+        super.save(dataFile);
     }
 
     @Override

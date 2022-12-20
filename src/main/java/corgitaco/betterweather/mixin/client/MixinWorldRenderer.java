@@ -4,8 +4,8 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import corgitaco.betterweather.api.client.ColorSettings;
 import corgitaco.betterweather.api.client.graphics.Graphics;
 import corgitaco.betterweather.helpers.BetterWeatherWorldData;
-import corgitaco.betterweather.mixin.access.Vector3dAccess;
 import corgitaco.betterweather.weather.BWWeatherEventContext;
+import corgitaco.betterweather.weather.event.client.RainClient;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -37,9 +37,8 @@ public abstract class MixinWorldRenderer implements Graphics {
     private void renderWeather(LightTexture lightmapIn, float partialTicks, double x, double y, double z, CallbackInfo ci) {
         BWWeatherEventContext weatherEventContext = ((BetterWeatherWorldData) this.level).getWeatherEventContext();
         if (weatherEventContext != null) {
-            if (weatherEventContext.getCurrentClientEvent().renderWeather(this, minecraft, this.level, lightmapIn, ticks, partialTicks, x, y, z, weatherEventContext.getCurrentEvent()::isValidBiome)) {
-                ci.cancel();
-            }
+            ci.cancel();
+            weatherEventContext.getCurrentClientEvent().renderWeather(this, minecraft, this.level, lightmapIn, ticks, partialTicks, x, y, z, weatherEventContext.getCurrentEvent()::isValidBiome);
         }
     }
 
@@ -47,8 +46,9 @@ public abstract class MixinWorldRenderer implements Graphics {
     private void stopRainParticles(Camera p_109694_, CallbackInfo ci) {
         BWWeatherEventContext weatherEventContext = ((BetterWeatherWorldData) this.level).getWeatherEventContext();
         if (minecraft.level != null && weatherEventContext != null) {
-            if (weatherEventContext.getCurrentClientEvent().weatherParticlesAndSound(p_109694_, this.minecraft, this.ticks, weatherEventContext.getCurrentEvent()::isValidBiome)) {
+            if (weatherEventContext.getCurrentClientEvent() instanceof RainClient rainClient) {
                 ci.cancel();
+                rainClient.weatherParticlesAndSound(p_109694_, this.minecraft, this.ticks, weatherEventContext.getCurrentEvent()::isValidBiome);
             }
         }
     }
@@ -80,9 +80,7 @@ public abstract class MixinWorldRenderer implements Graphics {
             float rainStrength = this.level.getRainLevel(Minecraft.getInstance().getFrameTime());
 
             float blend = (float) Math.min(cloudColorBlendStrength, rainStrength * blendStrengthAtLocation);
-            ((Vector3dAccess) p_234266_).setX(Mth.lerp(blend, p_234266_.x, r));
-            ((Vector3dAccess) p_234266_).setY(Mth.lerp(blend, p_234266_.y, g));
-            ((Vector3dAccess) p_234266_).setZ(Mth.lerp(blend, p_234266_.z, b));
+            p_234266_ = new Vec3(Mth.lerp(blend, p_234266_.x, r), Mth.lerp(blend, p_234266_.y, g), Mth.lerp(blend, p_234266_.z, b));
         }
     }
 }

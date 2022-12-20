@@ -7,7 +7,10 @@ import corgitaco.betterweather.api.client.WeatherEventClient;
 import corgitaco.betterweather.api.weather.WeatherEventClientSettings;
 import corgitaco.betterweather.weather.event.client.RainClient;
 import net.minecraft.Util;
+import net.minecraft.client.renderer.BiomeColors;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.biome.Biome;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -42,7 +45,6 @@ public class RainClientSettings extends WeatherEventClientSettings {
         this.rainTexture = rainTexture;
         this.snowTexture = snowTexture;
     }
-
     @Override
     public WeatherEventClient<?> createClientSettings() {
         return new RainClient(this);

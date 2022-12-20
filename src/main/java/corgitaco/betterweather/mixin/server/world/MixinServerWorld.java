@@ -3,12 +3,10 @@ package corgitaco.betterweather.mixin.server.world;
 import corgitaco.betterweather.api.Climate;
 import corgitaco.betterweather.api.weather.WeatherEvent;
 import corgitaco.betterweather.helpers.BetterWeatherWorldData;
-import corgitaco.betterweather.helpers.BiomeModifier;
-import corgitaco.betterweather.helpers.BiomeUpdate;
+import corgitaco.betterweather.helpers.ServerBiomeUpdate;
 import corgitaco.betterweather.weather.BWWeatherEventContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -37,14 +35,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
 
 
 @Mixin(ServerLevel.class)
-public abstract class MixinServerWorld implements BiomeUpdate, BetterWeatherWorldData, Climate {
+public abstract class MixinServerWorld implements BetterWeatherWorldData, Climate {
 
     @Shadow
     @Final
@@ -57,26 +53,7 @@ public abstract class MixinServerWorld implements BiomeUpdate, BetterWeatherWorl
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void storeUpgradablePerWorldRegistry(MinecraftServer p_214999_, Executor p_215000_, LevelStorageSource.LevelStorageAccess p_215001_, ServerLevelData p_215002_, ResourceKey p_215003_, LevelStem p_215004_, ChunkProgressListener p_215005_, boolean p_215006_, long p_215007_, List p_215008_, boolean p_215009_, CallbackInfo ci) {
-        updateBiomeData();
-    }
-
-    @SuppressWarnings("ConstantConditions")
-    @Override
-    public void updateBiomeData() {
-        Set<Holder<Biome>> validBiomes = this.chunkSource.getGenerator().getBiomeSource().possibleBiomes();
-        for (Map.Entry<ResourceKey<Biome>, Biome> entry : this.registryAccess().registryOrThrow(Registry.BIOME_REGISTRY).entrySet()) {
-            Biome biome = entry.getValue();
-            ResourceKey<Biome> biomeKey = entry.getKey();
-
-            if (weatherContext != null && validBiomes.contains(biome) && weatherContext.getCurrentEvent().isValidBiome(biome)) {
-                float weatherHumidityModifier = (float) this.weatherContext.getCurrentEvent().getHumidityModifierAtPosition(null);
-                float weatherTemperatureModifier = (float) this.weatherContext.getCurrentWeatherEventSettings().getTemperatureModifierAtPosition(null);
-                ((BiomeModifier) (Object) biome).setWeatherTempModifier(weatherTemperatureModifier);
-                ((BiomeModifier) (Object) biome).setWeatherHumidityModifier(weatherHumidityModifier);
-            }
-
-
-        }
+        new ServerBiomeUpdate(this.chunkSource, this.registryAccess(), this.weatherContext).updateBiomeData();
     }
 
     @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerLevel;updateSkyBrightness()V"))

@@ -1,7 +1,7 @@
 package corgitaco.betterweather.data.network.packet.weather;
 
 import corgitaco.betterweather.helpers.BetterWeatherWorldData;
-import corgitaco.betterweather.helpers.BiomeUpdate;
+import corgitaco.betterweather.helpers.ClientBiomeUpdate;
 import corgitaco.betterweather.weather.BWWeatherEventContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -39,10 +39,8 @@ public class WeatherContextConstructingPacket {
                     if (weatherEventContext == null) {
                         weatherEventContext = ((BetterWeatherWorldData) world).setWeatherEventContext(new BWWeatherEventContext(message.bwWeatherEventContext.getCurrentWeatherEventKey(),
                                 message.bwWeatherEventContext.isWeatherForced(), world.dimension().location(), world.registryAccess().registryOrThrow(Registry.BIOME_REGISTRY), message.bwWeatherEventContext.getWeatherEvents()));
-                        if(weatherEventContext != null) {
-                            weatherEventContext.setCurrentEvent(message.bwWeatherEventContext.getCurrentEvent());
-                            ((BiomeUpdate) world).updateBiomeData();
-                        }
+                        weatherEventContext.setCurrentEvent(message.bwWeatherEventContext.getCurrentEvent());
+                        new ClientBiomeUpdate(world.registryAccess(), message.bwWeatherEventContext).updateBiomeData();
                     } else {
                         throw new UnsupportedOperationException("There is already a weather event context constructed for this world!");
                     }

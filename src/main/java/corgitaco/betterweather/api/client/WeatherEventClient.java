@@ -6,10 +6,22 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import corgitaco.betterweather.BetterWeather;
+import corgitaco.betterweather.api.BetterWeatherRegistry;
 import corgitaco.betterweather.api.client.graphics.Graphics;
 import corgitaco.betterweather.api.client.graphics.opengl.program.ShaderProgram;
 import corgitaco.betterweather.api.client.graphics.opengl.program.ShaderProgramBuilder;
+import corgitaco.betterweather.api.weather.WeatherEvent;
 import corgitaco.betterweather.api.weather.WeatherEventClientSettings;
+import corgitaco.betterweather.data.storage.WeatherEventSavedData;
+import corgitaco.betterweather.helpers.BetterWeatherWorldData;
+import corgitaco.betterweather.util.BetterWeatherUtil;
+import corgitaco.betterweather.weather.BWWeatherEventContext;
+import corgitaco.betterweather.weather.event.AcidRain;
+import corgitaco.betterweather.weather.event.Blizzard;
+import corgitaco.betterweather.weather.event.Rain;
+import corgitaco.betterweather.weather.event.client.AcidRainClient;
+import corgitaco.betterweather.weather.event.client.BlizzardClient;
+import corgitaco.betterweather.weather.event.client.RainClient;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -47,15 +59,35 @@ public abstract class WeatherEventClient<T extends WeatherEventClientSettings> {
         this.sunsetSunriseColor = clientSettings.sunsetSunriseColor();
     }
 
-    public boolean renderWeather(Graphics graphics, Minecraft mc, ClientLevel world, LightTexture lightTexture, int ticks, float partialTicks, double x, double y, double z, Predicate<Biome> biomePredicate) {
-        return graphics.isSupported() ?
-                renderWeatherShaders(graphics, world, x, y, z) :
-                renderWeatherLegacy(mc, world, lightTexture, ticks, partialTicks, x, y, z, biomePredicate);
+    public void renderWeather(Graphics graphics, Minecraft mc, ClientLevel world, LightTexture lightTexture, int ticks, float partialTicks, double x, double y, double z, Predicate<Biome> biomePredicate) {
+        if (graphics.isSupported()) {
+            renderWeatherShaders(graphics, world, x, y, z);
+        } else {
+            renderWeatherLegacy(mc, world, lightTexture, ticks, partialTicks, x, y, z, biomePredicate);
+        }
     }
 
-    public abstract boolean renderWeatherShaders(Graphics graphics, ClientLevel world, double x, double y, double z);
+    public abstract void renderWeatherShaders(Graphics graphics, ClientLevel world, double x, double y, double z);
 
-    public abstract boolean renderWeatherLegacy(Minecraft mc, ClientLevel world, LightTexture lightTexture, int ticks, float partialTicks, double x, double y,  double z, Predicate<Biome> biomePredicate);
+    public void renderWeatherLegacy(Minecraft mc, ClientLevel world, LightTexture lightTexture, int ticks, float partialTicks, double x, double y, double z, Predicate<Biome> biomePredicate) {
+        switch (BWWeatherEventContext.currentEvent.getName()) {
+            case "none", "cloudy", "cloudy_thundering", "betterweather-none", "betterweather-cloudy", "betterweather-cloudy_thundering" -> {
+            }
+            case "rain", "betterweather-rain", "thundering", "betterweather-thundering" -> {
+                renderVanillaWeather(mc, partialTicks, x, y, z, lightTexture, Rain.RAIN_LOCATION, Rain.SNOW_LOCATION, ticks, biomePredicate);
+            }
+            case "acid_rain", "betterweather-acid_rain", "acid_rain_thundering", "betterweather-acid_rain_thundering" -> {
+                renderVanillaWeather(mc, partialTicks, x, y, z, lightTexture, AcidRain.ACID_RAIN_LOCATION, Rain.SNOW_LOCATION, ticks, biomePredicate);
+            }
+            case "blizzard", "betterweather-blizzard" -> {
+                ((BlizzardClient) Blizzard.DEFAULT.getClient()).renderWeatherLegacyBlizzard(mc, world, lightTexture, ticks, partialTicks, x, y, z, biomePredicate);
+            }
+            case "blizzard_thundering", "betterweather-blizzard_thundering" -> {
+                ((BlizzardClient) Blizzard.DEFAULT_THUNDERING.getClient()).renderWeatherLegacyBlizzard(mc, world, lightTexture, ticks, partialTicks, x, y, z, biomePredicate);
+            }
+            default -> throw new IllegalStateException("Unexpected value: " + BWWeatherEventContext.currentEvent.getName());
+        }
+    }
 
     public abstract void clientTick(ClientLevel world, int tickSpeed, long worldTime, Minecraft mc, Predicate<Biome> biomePredicate);
 
@@ -122,11 +154,7 @@ public abstract class WeatherEventClient<T extends WeatherEventClientSettings> {
         return mixer(world, playerPos, 15, 1.2F, (float) this.getColorSettings().getCloudColorBlendStrength(), isValidBiome);
     }
 
-    public boolean weatherParticlesAndSound(Camera renderInfo, Minecraft mc, float ticks, Predicate<Biome> validBiomes) {
-        return true;
-    }
-
-    public void renderVanillaWeather(Minecraft mc, float partialTicks, double cameraX, double cameraY, double cameraZ, LightTexture lightmapIn, float[] rainSizeX, float[] rainSizeZ, ResourceLocation rainTexture, ResourceLocation snowTexture, int ticks, Predicate<Biome> isValidBiome) {
+    public void renderVanillaWeather(Minecraft mc, float partialTicks, double cameraX, double cameraY, double cameraZ, LightTexture lightmapIn, ResourceLocation rainTexture, ResourceLocation snowTexture, int ticks, Predicate<Biome> isValidBiome) {
         if (mc.level != null) {
             float rainStrength = mc.level.getRainLevel(partialTicks);
             if (!(rainStrength <= 0.0F)) {
@@ -155,8 +183,8 @@ public abstract class WeatherEventClient<T extends WeatherEventClientSettings> {
                 for (int dz = z - weatherRenderDistanceInBlocks; dz <= z + weatherRenderDistanceInBlocks; ++dz) {
                     for (int dx = x - weatherRenderDistanceInBlocks; dx <= x + weatherRenderDistanceInBlocks; ++dx) {
                         int index = (dz - z + 16) * 32 + dx - x + 16;
-                        double rainX = (double) rainSizeX[index] * 0.5D;
-                        double rainZ = (double) rainSizeZ[index] * 0.5D;
+                        double rainX = (double) RainClient.getRainSizeX() * 5.0D;
+                        double rainZ = (double) RainClient.getRainSizeZ() * 5.0D;
                         mutable.set(dx, y, dz);
                         Holder<Biome> biome = world.getBiome(mutable);
                         if (!isValidBiome.test(biome.value())) {

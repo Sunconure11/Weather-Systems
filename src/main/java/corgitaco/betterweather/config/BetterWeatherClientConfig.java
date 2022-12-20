@@ -7,7 +7,7 @@ public class BetterWeatherClientConfig {
 
     public BetterWeatherClientConfig() {
         AbstractCommentedConfigHelper builder = new AbstractCommentedConfigHelper(BetterWeather.CONFIG_PATH.resolve("better-weather-client.toml"));
-        this.useServerClientSettings = builder.add("Match client configurations from the server?", "matchServer", false);
+        this.useServerClientSettings = builder.add("Match client configurations from the server?", "matchServer", true);
         builder.build();
     }
 }

@@ -2,6 +2,7 @@ package corgitaco.betterweather.weather.event.client.settings;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import corgitaco.betterweather.BetterWeather;
 import corgitaco.betterweather.api.client.ColorSettings;
 import corgitaco.betterweather.api.client.WeatherEventClient;
 import corgitaco.betterweather.api.weather.WeatherEventAudio;

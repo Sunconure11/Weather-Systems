@@ -29,7 +29,7 @@ public class AbstractCommentedConfigHelper {
         if (!filePath.getParent().toFile().exists()) {
             try {
                 Files.createDirectories(filePath.getParent());
-            } catch (IOException e) {
+            } catch (IOException ignored) {
 
             }
         }

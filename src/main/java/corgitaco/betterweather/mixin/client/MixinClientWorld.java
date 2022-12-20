@@ -2,14 +2,9 @@ package corgitaco.betterweather.mixin.client;
 
 import corgitaco.betterweather.api.Climate;
 import corgitaco.betterweather.helpers.BetterWeatherWorldData;
-import corgitaco.betterweather.helpers.BiomeModifier;
-import corgitaco.betterweather.helpers.BiomeUpdate;
 import corgitaco.betterweather.weather.BWWeatherEventContext;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.level.biome.Biome;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,11 +13,10 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import javax.annotation.Nullable;
-import java.util.Map;
 import java.util.function.BooleanSupplier;
 
 @Mixin(ClientLevel.class)
-public abstract class MixinClientWorld implements BetterWeatherWorldData, Climate, BiomeUpdate {
+public abstract class MixinClientWorld implements BetterWeatherWorldData, Climate {
 
     @Shadow public abstract RegistryAccess registryAccess();
 
@@ -48,20 +42,6 @@ public abstract class MixinClientWorld implements BetterWeatherWorldData, Climat
             this.weatherContext.tick((ClientLevel) (Object) this);
         }
     }
-
-    @Override
-    public void updateBiomeData() {
-        for (Map.Entry<ResourceKey<Biome>, Biome> entry : this.registryAccess().registryOrThrow(Registry.BIOME_REGISTRY).entrySet()) {
-            Biome biome = entry.getValue();
-            ResourceKey<Biome> biomeKey = entry.getKey();
-            float weatherHumidityModifier = weatherContext == null ? 0.0F : (float) this.weatherContext.getCurrentWeatherEventSettings().getHumidityModifierAtPosition(null);
-            float weatherTemperatureModifier = weatherContext == null ? 0.0F : (float) this.weatherContext.getCurrentWeatherEventSettings().getTemperatureModifierAtPosition(null);
-
-            ((BiomeModifier) (Object) biome).setWeatherTempModifier(weatherTemperatureModifier);
-            ((BiomeModifier) (Object) biome).setWeatherHumidityModifier(weatherHumidityModifier);
-        }
-    }
-
 
     @Redirect(method = "getSkyColor", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/ClientLevel;getRainLevel(F)F"))
     private float doNotDarkenSkyWithRainStrength(ClientLevel world, float delta) {

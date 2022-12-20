@@ -7,7 +7,6 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.ParticleStatus;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -34,39 +33,47 @@ public class RainClient extends WeatherEventClient<RainClientSettings> {
 
     protected final ResourceLocation rainTexture;
     protected final ResourceLocation snowTexture;
-    private final float[] rainSizeX = new float[1024];
-    private final float[] rainSizeZ = new float[1024];
+    private static final float[] rainSizeX = new float[1024];
+    private static final float[] rainSizeZ = new float[1024];
     private int rainSoundTime;
 
     public RainClient(RainClientSettings clientSettings) {
         super(clientSettings);
         this.rainTexture = clientSettings.rainTexture;
         this.snowTexture = clientSettings.snowTexture;
+    }
 
+    public static float getRainSizeX() {
+        float rainX = 0;
         for (int i = 0; i < 32; ++i) {
             for (int j = 0; j < 32; ++j) {
                 float f = (float) (j - 16);
                 float f1 = (float) (i - 16);
                 float f2 = Mth.sqrt(f * f + f1 * f1);
-                this.rainSizeX[i << 5 | j] = -f1 / f2;
-                this.rainSizeZ[i << 5 | j] = f / f2;
+                rainX = rainSizeX[i << 5 | j] = -f1 / f2;
             }
         }
+        return rainX;
+    }
+
+    public static float getRainSizeZ() {
+        float rainZ = 0;
+        for (int i = 0; i < 32; ++i) {
+            for (int j = 0; j < 32; ++j) {
+                float f = (float) (j - 16);
+                float f1 = (float) (i - 16);
+                float f2 = Mth.sqrt(f * f + f1 * f1);
+                rainZ = rainSizeZ[i << 5 | j] = f / f2;
+            }
+        }
+        return rainZ;
     }
 
     @Override
-    public boolean renderWeatherShaders(Graphics graphics, ClientLevel world, double x, double y, double z) {
-        return false;
+    public void renderWeatherShaders(Graphics graphics, ClientLevel world, double x, double y, double z) {
     }
 
-    @Override
-    public boolean renderWeatherLegacy(Minecraft mc, ClientLevel world, LightTexture lightTexture, int ticks, float partialTicks, double x, double y, double z, Predicate<Biome> biomePredicate) {
-        renderVanillaWeather(mc, partialTicks, x, y, z, lightTexture, rainSizeX, rainSizeZ, this.rainTexture, this.snowTexture, ticks, biomePredicate);
-        return true;
-    }
-
-    @Override
-    public boolean weatherParticlesAndSound(Camera renderInfo, Minecraft mc, float ticks, Predicate<Biome> validBiomes) {
+    public void weatherParticlesAndSound(Camera renderInfo, Minecraft mc, float ticks, Predicate<Biome> validBiomes) {
         float particleStrength = mc.level.getRainLevel(1.0F) / (Minecraft.useFancyGraphics() ? 1.0F : 2.0F);
         if (!(particleStrength <= 0.0F)) {
             Random random = new Random((long) ticks * 312987231L);
@@ -111,7 +118,6 @@ public class RainClient extends WeatherEventClient<RainClientSettings> {
                 }
             }
         }
-        return true;
     }
 
     protected void addParticlesToWorld(Minecraft mc, BlockPos motionBlockingHeightMinus1, double randDouble, double randDouble2, BlockState blockstate, FluidState fluidstate, double particleMaxAddedY) {
