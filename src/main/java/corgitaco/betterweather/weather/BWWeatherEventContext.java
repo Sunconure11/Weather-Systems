@@ -219,6 +219,9 @@ public class BWWeatherEventContext implements WeatherEventContext {
 
         if (isDefault) {
             worldInfo.setClearWeatherTime(weatherEventLength);
+        } else if (weatherEventName.equals("none")) {
+            worldInfo.setClearWeatherTime(0);
+            worldInfo.setRaining(false);
         } else {
             worldInfo.setClearWeatherTime(0);
             worldInfo.setRainTime(weatherEventLength);

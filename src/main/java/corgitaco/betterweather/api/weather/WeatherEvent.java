@@ -13,6 +13,7 @@ import corgitaco.betterweather.weather.event.client.settings.NoneClientSettings;
 import it.unimi.dsi.fastutil.objects.ReferenceArraySet;
 import net.minecraft.Util;
 import net.minecraft.core.Registry;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ChunkHolder;
@@ -109,8 +110,8 @@ public abstract class WeatherEvent implements WeatherEventSettings {
         return true;
     }
 
-    public final TranslatableContents successTranslationTextComponent(String key) {
-        return new TranslatableContents("commands.bw.setweather.success", new TranslatableContents("bw.weather." + key));
+    public final Component successTranslationTextComponent(String key) {
+        return Component.translatable("commands.bw.setweather.success", new TranslatableContents("bw.weather." + key));
     }
 
     public String getName() {

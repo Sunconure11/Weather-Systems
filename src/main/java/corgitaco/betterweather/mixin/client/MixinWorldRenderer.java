@@ -5,6 +5,7 @@ import corgitaco.betterweather.api.client.ColorSettings;
 import corgitaco.betterweather.api.client.graphics.Graphics;
 import corgitaco.betterweather.helpers.BetterWeatherWorldData;
 import corgitaco.betterweather.weather.BWWeatherEventContext;
+import corgitaco.betterweather.weather.event.client.CloudyClient;
 import corgitaco.betterweather.weather.event.client.RainClient;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -33,6 +34,8 @@ public abstract class MixinWorldRenderer implements Graphics {
     @Shadow
     private ClientLevel level;
 
+    @Shadow public abstract void initOutline();
+
     @Inject(at = @At("HEAD"), method = "renderSnowAndRain", cancellable = true)
     private void renderWeather(LightTexture lightmapIn, float partialTicks, double x, double y, double z, CallbackInfo ci) {
         BWWeatherEventContext weatherEventContext = ((BetterWeatherWorldData) this.level).getWeatherEventContext();
@@ -46,7 +49,9 @@ public abstract class MixinWorldRenderer implements Graphics {
     private void stopRainParticles(Camera p_109694_, CallbackInfo ci) {
         BWWeatherEventContext weatherEventContext = ((BetterWeatherWorldData) this.level).getWeatherEventContext();
         if (minecraft.level != null && weatherEventContext != null) {
-            if (weatherEventContext.getCurrentClientEvent() instanceof RainClient rainClient) {
+            if(weatherEventContext.getCurrentClientEvent() instanceof CloudyClient) {
+                ci.cancel();
+            } else if (weatherEventContext.getCurrentClientEvent() instanceof RainClient rainClient) {
                 ci.cancel();
                 rainClient.weatherParticlesAndSound(p_109694_, this.minecraft, this.ticks, weatherEventContext.getCurrentEvent()::isValidBiome);
             }

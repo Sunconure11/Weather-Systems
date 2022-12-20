@@ -67,6 +67,11 @@ public class WeatherSoundHandler implements AmbientSoundHandler {
                 if (world.rainLevel == 1.0) {
                     this.currentSound.fadeInSound();
                 }
+
+                if(currentEvent.getName().equals("cloudy") || currentEvent.getName().equals("cloudy_thundering")) {
+                    endAudio();
+                }
+
             } else {
                 endAudio();
             }
