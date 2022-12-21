@@ -6,12 +6,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.math.Matrix4f;
-import com.mojang.math.Vector3f;
-import corgitaco.betterweather.BetterWeather;
 import corgitaco.betterweather.api.client.WeatherEventClient;
-import corgitaco.betterweather.api.client.graphics.Graphics;
-import corgitaco.betterweather.api.client.graphics.opengl.program.ShaderProgram;
-import corgitaco.betterweather.api.client.graphics.opengl.program.ShaderProgramBuilder;
 import corgitaco.betterweather.api.weather.WeatherEventAudio;
 import corgitaco.betterweather.weather.event.client.settings.BlizzardClientSettings;
 import net.minecraft.client.Minecraft;
@@ -21,19 +16,13 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.Heightmap;
 
-import java.io.IOException;
 import java.util.Random;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
-
-import static org.lwjgl.opengl.GL20.GL_FRAGMENT_SHADER;
-import static org.lwjgl.opengl.GL20.GL_VERTEX_SHADER;
 
 public class BlizzardClient extends WeatherEventClient<BlizzardClientSettings> implements WeatherEventAudio {
     private final float[] rainSizeX = new float[1024];
@@ -42,8 +31,6 @@ public class BlizzardClient extends WeatherEventClient<BlizzardClientSettings> i
     private final SoundEvent audio;
     private final float audioVolume;
     private final float audioPitch;
-
-    private final Consumer<ShaderProgramBuilder> builder;
 
     private final Matrix4f modelMatrix = new Matrix4f();
 
@@ -63,67 +50,9 @@ public class BlizzardClient extends WeatherEventClient<BlizzardClientSettings> i
                 this.rainSizeZ[i << 5 | j] = f / f2;
             }
         }
-
-        builder = builder1 -> {
-            ResourceManager manager = Minecraft.getInstance().getResourceManager();
-
-            try {
-                builder1
-                        .compile(GL_FRAGMENT_SHADER, manager.getResource(new ResourceLocation(BetterWeather.MOD_ID, "shaders/fragment.glsl")).orElseThrow())
-                        .compile(GL_VERTEX_SHADER, manager.getResource(new ResourceLocation(BetterWeather.MOD_ID, "shaders/vertex.glsl")).orElseThrow());
-            } catch (IOException e) {
-                BetterWeather.LOGGER.error(e);
-
-                builder1.clean();
-            }
-        };
     }
 
-    @Override
-    public void renderWeatherShaders(Graphics graphics, ClientLevel world, double x, double y, double z) {
-        ShaderProgram program = buildOrGetProgram(builder);
-
-        int floorX = Mth.floor(x);
-        int floorY = Mth.floor(y);
-        int floorZ = Mth.floor(z);
-
-        int radius = 5;
-
-        program.bind();
-
-        modelMatrix.setIdentity();
-        modelMatrix.translate(new Vector3f((float) x, (float) y, (float) z));
-
-        program.uploadMatrix4f("pos", modelMatrix);
-
-        /**
-         * Imagine a horizontal plane.
-         *
-         * iterating from:
-         * (floor - radius) 🡢 (floor + radius) X
-         * 🡣
-         * (floor + radius)
-         * Z
-         *
-         * -x-z ─────(x)───── +x
-         * │                   ┊
-         * │                   ┊
-         * (z)                 ┊
-         * │                   ┊
-         * │                   ┊
-         * +z ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
-         */
-        for (int planeX = floorX - radius; planeX < floorX + radius; planeX++) for (int planeZ = floorZ - radius; planeZ < floorZ + radius; planeZ++) {
-
-            int height = world.getHeight(Heightmap.Types.MOTION_BLOCKING, planeX, planeZ);
-
-        }
-
-        program.unbind();
-
-    }
-
-    public boolean renderWeatherLegacyBlizzard(Minecraft mc, ClientLevel world, LightTexture lightTexture, int ticks, float partialTicks, double x, double y,  double z, Predicate<Biome> biomePredicate) {
+    public void renderWeatherLegacyBlizzard(Minecraft mc, ClientLevel world, LightTexture lightTexture, int ticks, float partialTicks, double x, double y, double z, Predicate<Biome> biomePredicate) {
         float rainStrength = world.getRainLevel(partialTicks);
         lightTexture.turnOnLightLayer();
         int floorX = Mth.floor(x);
@@ -211,7 +140,6 @@ public class BlizzardClient extends WeatherEventClient<BlizzardClientSettings> i
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
         lightTexture.turnOffLightLayer();
-        return true;
     }
 
     @Override

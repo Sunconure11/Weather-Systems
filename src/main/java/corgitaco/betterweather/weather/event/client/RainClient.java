@@ -1,7 +1,6 @@
 package corgitaco.betterweather.weather.event.client;
 
 import corgitaco.betterweather.api.client.WeatherEventClient;
-import corgitaco.betterweather.api.client.graphics.Graphics;
 import corgitaco.betterweather.weather.event.client.settings.RainClientSettings;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -67,10 +66,6 @@ public class RainClient extends WeatherEventClient<RainClientSettings> {
             }
         }
         return rainZ;
-    }
-
-    @Override
-    public void renderWeatherShaders(Graphics graphics, ClientLevel world, double x, double y, double z) {
     }
 
     public void weatherParticlesAndSound(Camera renderInfo, Minecraft mc, float ticks, Predicate<Biome> validBiomes) {

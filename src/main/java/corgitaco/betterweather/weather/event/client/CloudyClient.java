@@ -1,7 +1,6 @@
 package corgitaco.betterweather.weather.event.client;
 
 import corgitaco.betterweather.api.client.WeatherEventClient;
-import corgitaco.betterweather.api.client.graphics.Graphics;
 import corgitaco.betterweather.weather.event.client.settings.CloudyClientSettings;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -13,10 +12,6 @@ public class CloudyClient extends WeatherEventClient<CloudyClientSettings> {
 
     public CloudyClient(CloudyClientSettings clientSettings) {
         super(clientSettings);
-    }
-
-    @Override
-    public void renderWeatherShaders(Graphics graphics, ClientLevel world, double x, double y, double z) {
     }
 
     @Override

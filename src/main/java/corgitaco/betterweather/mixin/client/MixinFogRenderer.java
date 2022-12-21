@@ -23,7 +23,7 @@ public abstract class MixinFogRenderer {
         return ((BetterWeatherWorldData) world).getWeatherEventContext() != null ? 0.0F : world.getRainLevel(delta);
     }
 
-    @Inject(method = "setupFog", at = @At("HEAD"), cancellable = true, remap = false)
+    @Inject(method = "setupFog", at = @At("HEAD"), cancellable = true)
     private static void forceWeather(Camera p_234173_, FogRenderer.FogMode p_234174_, float p_234175_, boolean p_234176_, float p_234177_, CallbackInfo ci) {
         ClientLevel world = Minecraft.getInstance().level;
         BWWeatherEventContext weatherEventContext = ((BetterWeatherWorldData) world).getWeatherEventContext();

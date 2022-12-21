@@ -2,7 +2,6 @@ package corgitaco.betterweather.mixin.client;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import corgitaco.betterweather.api.client.ColorSettings;
-import corgitaco.betterweather.api.client.graphics.Graphics;
 import corgitaco.betterweather.helpers.BetterWeatherWorldData;
 import corgitaco.betterweather.weather.BWWeatherEventContext;
 import corgitaco.betterweather.weather.event.client.CloudyClient;
@@ -25,7 +24,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(LevelRenderer.class)
-public abstract class MixinWorldRenderer implements Graphics {
+public abstract class MixinWorldRenderer {
     @Shadow
     private int ticks;
     @Shadow
@@ -41,7 +40,7 @@ public abstract class MixinWorldRenderer implements Graphics {
         BWWeatherEventContext weatherEventContext = ((BetterWeatherWorldData) this.level).getWeatherEventContext();
         if (weatherEventContext != null) {
             ci.cancel();
-            weatherEventContext.getCurrentClientEvent().renderWeather(this, minecraft, this.level, lightmapIn, ticks, partialTicks, x, y, z, weatherEventContext.getCurrentEvent()::isValidBiome);
+            weatherEventContext.getCurrentClientEvent().renderWeather(minecraft, this.level, lightmapIn, ticks, partialTicks, x, y, z, weatherEventContext.getCurrentEvent()::isValidBiome);
         }
     }
 

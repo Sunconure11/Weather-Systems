@@ -3,15 +3,9 @@ package corgitaco.betterweather.api;
 import com.mojang.serialization.Codec;
 import corgitaco.betterweather.api.weather.WeatherEvent;
 import corgitaco.betterweather.api.weather.WeatherEventClientSettings;
-import corgitaco.betterweather.mixin.access.RegistryAccess;
-import corgitaco.betterweather.weather.event.*;
-import corgitaco.betterweather.weather.event.client.settings.*;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.RegistryObject;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,9 +20,9 @@ public class BetterWeatherRegistry {
 
     public static final ResourceKey<Registry<Codec<? extends WeatherEventClientSettings>>> CLIENT_WEATHER_EVENT_KEY = ResourceKey.createRegistryKey(new ResourceLocation(MOD_ID, "weather_event_client"));
 
-    public static final Registry<Codec<? extends WeatherEvent>> WEATHER_EVENT = RegistryAccess.invokeRegisterSimple(WEATHER_EVENT_KEY, p_236015_ -> WeatherEvent.CODEC);
+    public static final Registry<Codec<? extends WeatherEvent>> WEATHER_EVENT = Registry.registerSimple(WEATHER_EVENT_KEY, p_236015_ -> WeatherEvent.CODEC);
 
-    public static final Registry<Codec<? extends WeatherEventClientSettings>> CLIENT_WEATHER_EVENT_SETTINGS = RegistryAccess.invokeRegisterSimple(CLIENT_WEATHER_EVENT_KEY, p_236015_ -> WeatherEventClientSettings.CODEC);
+    public static final Registry<Codec<? extends WeatherEventClientSettings>> CLIENT_WEATHER_EVENT_SETTINGS = Registry.registerSimple(CLIENT_WEATHER_EVENT_KEY, p_236015_ -> WeatherEventClientSettings.CODEC);
 
     public static Map<String, WeatherEvent> getWeather() {
         HashMap<String, WeatherEvent> weatherEventHashMap = new HashMap<>();

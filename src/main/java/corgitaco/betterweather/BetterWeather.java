@@ -31,21 +31,12 @@ public class BetterWeather {
 
     public static final BetterWeatherClientConfig CLIENT_CONFIG = new BetterWeatherClientConfig();
 
-    public static final boolean USING_OPTIFINE = new LazyLoadedValue<>(() -> {
-        try {
-            return Class.forName("net.optifine.Config") != null;
-        } catch (final Exception e) {
-            return false;
-        }
-    }).get();
-
     public BetterWeather() {
         if (!CONFIG_PATH.toFile().exists())
             CONFIG_PATH.toFile().mkdir();
 
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
         bus.addListener(this::commonSetup);
-        bus.addListener(this::clientSetup);
         bus.addListener(this::lateSetup);
     }
 
@@ -73,12 +64,6 @@ public class BetterWeather {
         BetterWeatherRegistry.DEFAULT_EVENTS.put(new ResourceLocation(BetterWeather.MOD_ID, "blizzard_thundering"), Blizzard.DEFAULT_THUNDERING);
         BetterWeatherRegistry.DEFAULT_EVENTS.put(new ResourceLocation(BetterWeather.MOD_ID, "cloudy_thundering"), Cloudy.DEFAULT_THUNDERING);
         BetterWeatherRegistry.DEFAULT_EVENTS.put(new ResourceLocation(BetterWeather.MOD_ID, "thundering"), Rain.DEFAULT_THUNDERING);
-    }
-
-    private void clientSetup(FMLClientSetupEvent event) {
-        if (USING_OPTIFINE) {
-            LOGGER.info("Optifine is loaded.");
-        }
     }
 
     private void lateSetup(FMLLoadCompleteEvent event) {

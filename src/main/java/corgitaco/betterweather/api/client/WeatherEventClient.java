@@ -5,24 +5,12 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import corgitaco.betterweather.BetterWeather;
-import corgitaco.betterweather.api.BetterWeatherRegistry;
-import corgitaco.betterweather.api.client.graphics.Graphics;
-import corgitaco.betterweather.api.client.graphics.opengl.program.ShaderProgram;
-import corgitaco.betterweather.api.client.graphics.opengl.program.ShaderProgramBuilder;
-import corgitaco.betterweather.api.weather.WeatherEvent;
 import corgitaco.betterweather.api.weather.WeatherEventClientSettings;
-import corgitaco.betterweather.data.storage.WeatherEventSavedData;
-import corgitaco.betterweather.helpers.BetterWeatherWorldData;
-import corgitaco.betterweather.util.BetterWeatherUtil;
 import corgitaco.betterweather.weather.BWWeatherEventContext;
 import corgitaco.betterweather.weather.event.AcidRain;
 import corgitaco.betterweather.weather.event.Blizzard;
 import corgitaco.betterweather.weather.event.Rain;
-import corgitaco.betterweather.weather.event.client.AcidRainClient;
 import corgitaco.betterweather.weather.event.client.BlizzardClient;
-import corgitaco.betterweather.weather.event.client.RainClient;
-import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.GameRenderer;
@@ -33,14 +21,11 @@ import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-import java.util.Random;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 public abstract class WeatherEventClient<T extends WeatherEventClientSettings> {
@@ -49,8 +34,6 @@ public abstract class WeatherEventClient<T extends WeatherEventClientSettings> {
     private final float skyOpacity;
     private final float fogDensity;
     private final boolean sunsetSunriseColor;
-
-    private ShaderProgram program;
 
     protected final BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
 
@@ -61,15 +44,9 @@ public abstract class WeatherEventClient<T extends WeatherEventClientSettings> {
         this.sunsetSunriseColor = clientSettings.sunsetSunriseColor();
     }
 
-    public void renderWeather(Graphics graphics, Minecraft mc, ClientLevel world, LightTexture lightTexture, int ticks, float partialTicks, double x, double y, double z, Predicate<Biome> biomePredicate) {
-        if (graphics.isSupported()) {
-            renderWeatherShaders(graphics, world, x, y, z);
-        } else {
-            renderWeatherLegacy(mc, world, lightTexture, ticks, partialTicks, x, y, z, biomePredicate);
-        }
+    public void renderWeather(Minecraft mc, ClientLevel world, LightTexture lightTexture, int ticks, float partialTicks, double x, double y, double z, Predicate<Biome> biomePredicate) {
+        renderWeatherLegacy(mc, world, lightTexture, ticks, partialTicks, x, y, z, biomePredicate);
     }
-
-    public abstract void renderWeatherShaders(Graphics graphics, ClientLevel world, double x, double y, double z);
 
     public void renderWeatherLegacy(Minecraft mc, ClientLevel world, LightTexture lightTexture, int ticks, float partialTicks, double x, double y, double z, Predicate<Biome> biomePredicate) {
         switch (BWWeatherEventContext.currentEvent.getName()) {
@@ -291,23 +268,5 @@ public abstract class WeatherEventClient<T extends WeatherEventClientSettings> {
             RenderSystem.disableBlend();
             p_109704_.turnOffLightLayer();
         }
-    }
-
-    public ShaderProgram buildOrGetProgram(Consumer<ShaderProgramBuilder> consumer) {
-        if (program == null) {
-            ShaderProgramBuilder builder = ShaderProgramBuilder.create();
-
-            try {
-                consumer.accept(builder);
-            } catch (Exception e) {
-                BetterWeather.LOGGER.error(e);
-
-                builder.clean();
-            }
-
-            return program = builder.build();
-        }
-
-        return program;
     }
 }

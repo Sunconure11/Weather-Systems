@@ -16,10 +16,7 @@ import javax.annotation.Nullable;
 import java.util.function.BooleanSupplier;
 
 @Mixin(ClientLevel.class)
-public abstract class MixinClientWorld implements BetterWeatherWorldData, Climate {
-
-    @Shadow public abstract RegistryAccess registryAccess();
-
+public class MixinClientWorld implements BetterWeatherWorldData, Climate {
     @Nullable
     private BWWeatherEventContext weatherContext;
 

@@ -36,12 +36,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
 import java.util.*;
 
-@SuppressWarnings("deprecation")
 public class Blizzard extends WeatherEvent {
 
     public static final Codec<Blizzard> CODEC = RecordCodecBuilder.create((builder) -> {
@@ -162,11 +162,6 @@ public class Blizzard extends WeatherEvent {
     }
 
     @Override
-    public void worldTick(ServerLevel world, int tickSpeed, long worldTime) {
-
-    }
-
-    @Override
     public void chunkTick(LevelChunk chunk, ServerLevel world) {
         if (this.chunkTickChance < 1) {
             return;
@@ -230,22 +225,7 @@ public class Blizzard extends WeatherEvent {
     }
 
     @Override
-    public void livingEntityUpdate(Entity entity) {
-//        World world = entity.world;
-//        if (!isValidBiome(world.getBiome(entity.getPosition()))) {
-//            return;
-//        }
-//
-//        if(world.getWorldInfo().getGameTime() % 20 == 0) {
-//            if (entityTypeToEffectMap.containsKey(entity.getType())) {
-//                for (EffectInstance effectInstance : entityTypeToEffectMap.get(entity.getType())) {
-//                    if (!entity.isPotionActive(effectInstance.getPotion())) {
-//                        entity.addPotionEffect(effectInstance);
-//                    }
-//                }
-//            }
-//        }
-    }
+    public void worldTick(ServerLevel world, int tickSpeed, long worldTime) {}
 
     @Override
     public Codec<? extends WeatherEvent> codec() {

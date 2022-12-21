@@ -1,5 +1,6 @@
 package corgitaco.betterweather.weather.event;
 
+import com.google.common.eventbus.Subscribe;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -20,6 +21,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
@@ -29,12 +31,16 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.Material;
+import net.minecraftforge.event.entity.living.LivingEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
+@Mod.EventBusSubscriber
 public class AcidRain extends Rain {
 
     public static final Codec<AcidRain> CODEC = RecordCodecBuilder.create((builder) -> {
@@ -165,11 +171,14 @@ public class AcidRain extends Rain {
         }
     }
 
-    @Override
-    public void livingEntityUpdate(Entity entity) {
+    @SubscribeEvent
+    public void livingEntityUpdate(LivingEvent.LivingTickEvent event) {
         if (this.chunkTickChance < 1) {
             return;
         }
+
+        LivingEntity entity = event.getEntity();
+
         Level world = entity.level;
         if (world.random.nextInt(entityDamageChance) == 0) {
             BlockPos entityPosition = entity.blockPosition();

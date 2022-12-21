@@ -20,7 +20,9 @@ import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.animal.horse.SkeletonHorse;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.chunk.ChunkSource;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.storage.LevelStorageSource;
@@ -35,6 +37,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
 
@@ -42,22 +45,18 @@ import java.util.function.BooleanSupplier;
 @Mixin(ServerLevel.class)
 public abstract class MixinServerWorld implements BetterWeatherWorldData, Climate {
 
-    @Shadow
-    @Final
-    private ServerChunkCache chunkSource;
-
-    @Shadow public abstract RegistryAccess registryAccess();
-
     @Nullable
     private BWWeatherEventContext weatherContext;
 
     @Inject(method = "<init>", at = @At("RETURN"))
-    private void storeUpgradablePerWorldRegistry(MinecraftServer p_214999_, Executor p_215000_, LevelStorageSource.LevelStorageAccess p_215001_, ServerLevelData p_215002_, ResourceKey p_215003_, LevelStem p_215004_, ChunkProgressListener p_215005_, boolean p_215006_, long p_215007_, List p_215008_, boolean p_215009_, CallbackInfo ci) {
-        new ServerBiomeUpdate(this.chunkSource, this.registryAccess(), this.weatherContext).updateBiomeData();
+    private void storeUpgradablePerWorldRegistry(MinecraftServer mc, Executor p_215000_, LevelStorageSource.LevelStorageAccess p_215001_, ServerLevelData p_215002_, ResourceKey<Level> resourceKey, LevelStem p_215004_, ChunkProgressListener p_215005_, boolean p_215006_, long p_215007_, List p_215008_, boolean p_215009_, CallbackInfo ci) {
+        if (mc.getLevel(resourceKey) != null) {
+            new ServerBiomeUpdate(Objects.requireNonNull(mc.getLevel(resourceKey)).getChunkSource(), mc.registryAccess(), this.weatherContext).updateBiomeData();
+        }
     }
 
     @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerLevel;updateSkyBrightness()V"))
-    private void tick(BooleanSupplier hasTimeLeft, CallbackInfo ci) {
+    private void tick(BooleanSupplier p_8794_, CallbackInfo ci) {
         if (weatherContext != null) {
             this.weatherContext.tick((ServerLevel) (Object) this);
         }
