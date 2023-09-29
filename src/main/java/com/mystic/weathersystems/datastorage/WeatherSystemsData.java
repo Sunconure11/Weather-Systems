@@ -2,6 +2,7 @@ package com.mystic.weathersystems.datastorage;
 
 import com.mystic.weathersystems.WeatherSystems;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
@@ -23,16 +24,16 @@ public class WeatherSystemsData extends SavedData {
     }
 
     @Override
-    public void load(CompoundTag nbt) {
-        setAcidRain(nbt.getBoolean("AcidRain"));
-        setBlizzard(nbt.getBoolean("Blizzard"));
+    public void get(NbtCompound compound) {
+        setAcidRain(compound.getBoolean("AcidRain"));
+        setBlizzard(compound.getBoolean("Blizzard"));
     }
 
     @Override
-    public CompoundTag save(CompoundTag compound) {
-        compound.putBoolean("AcidRain", acidRain);
-        compound.putBoolean("Blizzard", blizzard);
-        return compound;
+    public NbtCompound set(NbtCompound set) {
+        set.putBoolean("AcidRain", acidRain);
+        set.putBoolean("Blizzard", blizzard);
+        return set;
     }
 
     public boolean isAcidRain() {
