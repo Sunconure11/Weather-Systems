@@ -1,13 +1,7 @@
 package com.mystic.weathersystems.datastorage;
 
 import com.mystic.weathersystems.WeatherSystems;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
-import net.minecraft.world.level.saveddata.SavedData;
-import net.minecraft.world.level.storage.DimensionDataStorage;
 
 public class WeatherSystemsData extends SavedData {
     public static String DATA_NAME = WeatherSystems.MOD_ID + ":weather_data";
