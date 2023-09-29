@@ -4,26 +4,16 @@ import com.mystic.weathersystems.SoundRegistry;
 import com.mystic.weathersystems.WeatherSystems;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.Camera;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import net.minecraft.core.BlockPos;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.world.level.material.Material;
+import net.minecraft.block.Block;
+import net.minecraft.block.Blocks;
+import net.minecraft.block.Material;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.sound.SoundEvent;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
+import net.minecraft.world.Heightmap;
+import net.minecraft.world.biome.Biome;
 
 
 public class Blizzard {
@@ -56,7 +46,7 @@ public class Blizzard {
                     else if (block == Blocks.SNOW && world.getBlockState(blockpos).getValue(BlockStateProperties.LAYERS) == 4 && world.random.nextInt(5) == 4)
                         world.setBlockAndUpdate(blockpos, block.defaultBlockState().setValue(BlockStateProperties.LAYERS, 5));
                     else if (block == Blocks.SNOW && world.getBlockState(blockpos).getValue(BlockStateProperties.LAYERS) == 5 && world.random.nextInt(5) == 0)
-                        world.setBlockAndUpdate(blockpos, block.defaultBlockState().setValue(BlockStateProperties.LAYERS, 6));
+                        world.setBlockAndUpdate.place(blockpos, block.defaultBlockState().setValue(BlockStateProperties.LAYERS, 6));
                     else if (block == Blocks.SNOW && world.getBlockState(blockpos).getValue(BlockStateProperties.LAYERS) == 6 && world.random.nextInt(5) == 1)
                         world.setBlockAndUpdate(blockpos, block.defaultBlockState().setValue(BlockStateProperties.LAYERS, 7));
                     else if (block == Blocks.SNOW && world.getBlockState(blockpos).getValue(BlockStateProperties.LAYERS) == 7 && world.random.nextInt(5) == 0)

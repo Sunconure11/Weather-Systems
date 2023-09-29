@@ -2,6 +2,7 @@ package com.mystic.weathersystems.datastorage;
 
 import com.mystic.weathersystems.WeatherSystems;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.world.*;
 
 public class WeatherSystemsData extends SavedData {
     public static String DATA_NAME = WeatherSystems.MOD_ID + ":weather_data";
@@ -40,12 +41,12 @@ public class WeatherSystemsData extends SavedData {
 
     public void setAcidRain(boolean acidRain) {
         this.acidRain = acidRain;
-        setDirty();
+        this.set(new NbtCompound());
     }
 
     public void setBlizzard(boolean isBlizzard) {
         this.blizzard = isBlizzard;
-        setDirty();
+        this.set(new NbtCompound());
     }
 
     public static WeatherSystemsData get(LevelAccessor world) {
