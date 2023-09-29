@@ -42,9 +42,6 @@ dependencies {
     modImplementation ("me.sargunvohra.mcmods:autoconfig1u:${project.auto_config_version}"){
         exclude module: 'fabric-api'
     }
-    include ("me.sargunvohra.mcmods:autoconfig1u:${project.auto_config_version}"){
-        exclude module: 'fabric-api'
-    }
     modApi("me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}") {
         exclude(group: "net.fabricmc.fabric-api")
     }

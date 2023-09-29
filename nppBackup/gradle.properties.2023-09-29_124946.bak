@@ -15,5 +15,6 @@ org.gradle.jvmargs=-Xmx1G
     fabric_version=0.76.1+1.19.2
 
     #Dependencies
-    cloth_config_version = 8.3.103
+    auto_config_version = 3.3.1
+    cloth_config_version = 4.12.41
     mod_menu_version = 4.2.0-beta.2
