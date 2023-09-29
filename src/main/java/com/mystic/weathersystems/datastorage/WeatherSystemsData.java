@@ -18,9 +18,9 @@ public class WeatherSystemsData extends SavedData {
     }
 
     @Override
-    public void get(NbtCompound compound) {
-        setAcidRain(compound.getBoolean("AcidRain"));
-        setBlizzard(compound.getBoolean("Blizzard"));
+    public void get(NbtCompound get) {
+        setAcidRain(get.getBoolean("AcidRain"));
+        setBlizzard(get.getBoolean("Blizzard"));
     }
 
     @Override
