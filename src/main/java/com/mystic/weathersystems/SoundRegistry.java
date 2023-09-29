@@ -1,9 +1,7 @@
 package com.mystic.weathersystems;
 
 
-import net.minecraft.core.Registry;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sound.SoundEvent;
 
 public class SoundRegistry {
     public static SoundEvent BLIZZARD_LOOP1 = new SoundEvent(new ResourceLocation(WeatherSystems.MOD_ID, "blizzard_loop1"));
